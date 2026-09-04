@@ -1,0 +1,4 @@
+{
+  "agent-dev-01": "Dev Agent (Tauri)",
+  "_comment": "Mapa deviceId → nombre amigable. Se carga al arrancar el API."
+}

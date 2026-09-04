@@ -288,6 +288,22 @@ router.get(
   }),
 );
 
+// Renombrar device desde Admin (tabla de equivalencias configurable)
+router.put(
+  '/api/v1/devices/:id',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    const { name } = req.body ?? {};
+    if (!deviceId || typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'deviceId y name requeridos' });
+      return;
+    }
+    await pool.query('UPDATE devices SET name = ? WHERE id = ?', [name.trim(), deviceId]);
+    res.json({ ok: true, deviceId, name: name.trim() });
+  }),
+);
+
 router.get(
   '/api/v1/devices/:id/status',
   requireAuth,

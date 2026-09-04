@@ -15,6 +15,7 @@ docker compose up --build
 
 - API: http://localhost:3000/health
 - Admin: http://localhost:5173 (login con `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD`)
+- Admin público: https://onetask.ecc-sa.com.mx (Cloudflare Tunnel → puerto 5173)
 - phpMyAdmin (opcional): `docker compose --profile tools up phpmyadmin` → http://localhost:8080
 
 ## Estructura

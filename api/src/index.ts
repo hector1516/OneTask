@@ -1,10 +1,27 @@
 import 'dotenv/config';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
 import { migrate, pool } from './db';
 import { ensureSeedAdmin } from './auth';
 import { router } from './routes';
 import { seedModules } from './modules';
+
+async function loadDeviceAliases(): Promise<void> {
+  try {
+    const raw = await fs.readFile(path.join(process.cwd(), 'seeds', 'device-names.json'), 'utf8');
+    const map = JSON.parse(raw) as Record<string, string>;
+    for (const [deviceId, name] of Object.entries(map)) {
+      if (deviceId.startsWith('_')) continue;
+      await pool.query('UPDATE devices SET name = ? WHERE id = ?', [name, deviceId]);
+    }
+    const count = Object.keys(map).filter((k) => !k.startsWith('_')).length;
+    if (count > 0) console.log(`[boot] ${count} alias(es) de device aplicados desde device-names.json`);
+  } catch {
+    // archivo opcional
+  }
+}
 
 async function main(): Promise<void> {
   await migrate();
@@ -21,6 +38,9 @@ async function main(): Promise<void> {
   } catch (err) {
     console.warn('[boot] seedModules falló:', (err as Error).message);
   }
+
+  // Aplica alias de nombre desde seeds/device-names.json
+  await loadDeviceAliases();
 
   const app = express();
   app.disable('x-powered-by');

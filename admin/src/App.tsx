@@ -80,6 +80,7 @@ function Login() {
 
 interface Device {
   deviceId: string;
+  id: string;
   name: string;
   online: boolean;
   lastHeartbeat: string | null;
@@ -91,6 +92,22 @@ function Devices() {
   const { data, reload } = useJson<{ devices: Device[] }>('/api/v1/devices');
   const devices = data?.devices ?? [];
   const online = devices.filter((d) => d.online).length;
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newNames, setNewNames] = useState<Record<string, string>>({});
+
+  const rename = async (deviceId: string) => {
+    const name = newNames[deviceId]?.trim();
+    if (!name) return;
+    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(deviceId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+    if (r.ok) {
+      setEditingId(null);
+      reload();
+    }
+  };
+
   return (
     <div>
       <div className="card">
@@ -107,8 +124,41 @@ function Devices() {
         {devices.map((d) => (
           <Link key={d.deviceId} to={`/devices/${encodeURIComponent(d.deviceId)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="item">
-              <div className="title">{d.deviceId}</div>
-              <div className="sub">{d.name}</div>
+              <div className="title">
+                {d.name}
+                <button
+                  className="ghost"
+                  style={{ marginLeft: 8, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setEditingId(editingId === d.deviceId ? null : d.deviceId);
+                    setNewNames({ ...newNames, [d.deviceId]: d.name });
+                  }}
+                >
+                  ✎
+                </button>
+              </div>
+              {editingId === d.deviceId && (
+                <div className="row" style={{ marginTop: 6 }} onClick={(e) => e.preventDefault()}>
+                  <input
+                    value={newNames[d.deviceId] ?? d.name}
+                    onChange={(e) => setNewNames({ ...newNames, [d.deviceId]: e.target.value })}
+                    placeholder="Nombre"
+                    style={{ width: 200 }}
+                  />
+                  <button
+                    style={{ padding: '4px 10px', minHeight: 'auto' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      rename(d.deviceId);
+                    }}
+                  >
+                    ✓
+                  </button>
+                </div>
+              )}
+              <div className="sub">{d.deviceId}</div>
               <div className="meta">
                 <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? '● En servicio' : '○ Fuera de combate'}</span>
                 <span className="muted">
@@ -151,7 +201,7 @@ function DeviceDetail() {
   const { id = '' } = useParams();
   const deviceId = decodeURIComponent(id);
   const enc = encodeURIComponent(deviceId);
-  const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number } }>(
+  const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number }; name: string }>(
     `/api/v1/devices/${enc}/status`,
   );
   const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(`/api/v1/devices/${enc}/queue`);
@@ -161,9 +211,23 @@ function DeviceDetail() {
   const [ver, setVer] = useState('1.0.0');
   const [params, setParams] = useState('{}');
   const [busy, setBusy] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
   const q = queue.data;
   const pct = q && q.total > 0 ? Math.round((q.done / q.total) * 100) : 0;
   const avail = modules.data?.modules ?? [{ manifest: { id: 'system-monitor', name: 'System Monitor', version: '1.0.0' } }];
+
+  const rename = async () => {
+    if (!newName.trim()) return;
+    const r = await apiFetch(`/api/v1/devices/${enc}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name: newName.trim() }),
+    });
+    if (r.ok) {
+      setEditingName(false);
+      status.reload();
+    }
+  };
 
   const enqueue = async () => {
     let parsed: unknown = {};
@@ -190,10 +254,32 @@ function DeviceDetail() {
     <div>
       <Link to="/devices">← tropas</Link>
       <div className="card" style={{ marginTop: 8 }}>
-        <h2 style={{ wordBreak: 'break-all' }}>
-          <span className="star">★</span> Misión: {deviceId}
-        </h2>
-        <div className="meta row">
+        <div className="row">
+          <h2 style={{ flex: 1, margin: 0, wordBreak: 'break-all' }}>
+            <span className="star">★</span> {status.data?.name || deviceId}
+          </h2>
+          {!editingName ? (
+            <button
+              className="ghost"
+              onClick={() => {
+                setNewName(status.data?.name || '');
+                setEditingName(true);
+              }}
+            >
+              ✎
+            </button>
+          ) : (
+            <div className="row">
+              <input value={newName} onChange={(e) => setNewName(e.target.value)} style={{ width: 160 }} placeholder="Nombre" />
+              <button onClick={rename}>✓</button>
+              <button className="ghost" onClick={() => setEditingName(false)}>
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="muted" style={{ wordBreak: 'break-all' }}>ID: {deviceId}</div>
+        <div className="meta row" style={{ marginTop: 8 }}>
           <span className={`badge ${status.data?.online ? 'online' : 'offline'}`}>{status.data?.online ? '● En servicio' : '○ Fuera de combate'}</span>
           <span className="muted">parte: {status.data?.lastHeartbeat ?? 'sin contacto'}</span>
         </div>
