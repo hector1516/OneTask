@@ -77,6 +77,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const deviceId = deviceIdOf(req);
+    console.log(`[agent] GET /me/modules deviceId=${deviceId} core=${req.headers['x-core-version'] ?? '?'} minCore=${req.query.minCoreVersion ?? '?'}`);
     if (deviceId) await ensureDevice(deviceId);
     const minCore = typeof req.query.minCoreVersion === 'string' ? req.query.minCoreVersion : undefined;
     const all = await listModules();
@@ -107,6 +108,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const deviceId = deviceIdOf(req);
+    console.log(`[agent] GET /me/queue deviceId=${deviceId} core=${req.headers['x-core-version'] ?? '?'} ua=${(req.headers['user-agent'] as string)?.substring(0, 60) ?? '?'}`);
     if (!deviceId) {
       res.status(400).json({ error: 'deviceId requerido (?deviceId= o X-Device-Id)' });
       return;
@@ -272,6 +274,7 @@ router.post(
   '/api/v1/results',
   requireAuth,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    console.log(`[agent] POST /results deviceId=${req.body?.deviceId} module=${req.body?.module?.id} status=${req.body?.execution?.status}`);
     const { deviceId, module, queue, execution, reportedAt } = req.body ?? {};
     if (!deviceId) {
       res.status(400).json({ error: 'deviceId requerido' });
@@ -434,6 +437,7 @@ router.get(
   '/api/v1/modules/:id/:version/bundle.js',
   requireAuth,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    console.log(`[agent] GET /modules/${req.params.id}/${req.params.version}/bundle.js`);
     const { code } = await readBundle(req.params.id, req.params.version);
     res.type('text/javascript').send(code);
   }),
