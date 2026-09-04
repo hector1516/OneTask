@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS modules (
   id VARCHAR(128) NOT NULL,
   version VARCHAR(32) NOT NULL,
   name VARCHAR(255) NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL,
   entry VARCHAR(255) NOT NULL DEFAULT 'bundle.js',
   min_core_version VARCHAR(32) NOT NULL DEFAULT '0.1.0',
   permissions JSON NOT NULL,
