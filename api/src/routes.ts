@@ -186,6 +186,25 @@ router.delete(
     res.json({ ok: true, cancelled });
   }),
 );
+
+// Vaciar TODO el buffer de un device (incluye done/failed)
+router.delete(
+  '/api/v1/devices/:id/queue/all',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    if (!deviceId) {
+      res.status(400).json({ error: 'deviceId requerido' });
+      return;
+    }
+    const [result] = await pool.query(
+      `DELETE FROM module_queue WHERE deviceId = ?`,
+      [deviceId],
+    );
+    const deleted = (result as { affectedRows: number }).affectedRows;
+    res.json({ ok: true, deleted });
+  }),
+);
 router.delete(
   '/api/v1/devices/:id/queue/:itemId',
   requireAuth,

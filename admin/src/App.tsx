@@ -267,6 +267,15 @@ function DeviceDetail() {
     }
   };
 
+  const clearAll = async () => {
+    if (!confirm('¿Vaciar TODO el buffer? Se borrarán done, failed y pending.')) return;
+    const r = await apiFetch(`/api/v1/devices/${enc}/queue/all`, { method: 'DELETE' });
+    if (r.ok) {
+      queue.reload();
+      status.reload();
+    }
+  };
+
   return (
     <div>
       <Link to="/devices">← tropas</Link>
@@ -333,13 +342,22 @@ function DeviceDetail() {
         <div className="row">
           <h3 style={{ flex: 1, margin: 0 }}>Buffer de misión ({q?.queue?.length ?? 0})</h3>
           {(q?.queue?.length ?? 0) > 0 && (
-            <button
-              className="ghost"
-              style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
-              onClick={cancelAll}
-            >
-              ✕ Borrar todo
-            </button>
+            <>
+              <button
+                className="ghost"
+                style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
+                onClick={cancelAll}
+              >
+                ✕ Cancelar activas
+              </button>
+              <button
+                className="ghost"
+                style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
+                onClick={clearAll}
+              >
+                ✕ Vaciar todo
+              </button>
+            </>
           )}
         </div>
         <div className="list">
