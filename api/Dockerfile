@@ -20,4 +20,4 @@ RUN chmod +x ./wait-for-it.sh
 COPY seeds ./seeds
 RUN mkdir -p /app/storage/modules
 EXPOSE 3000
-CMD ["sh", "-c", "./wait-for-it.sh ${DB_HOST:-mysql}:${DB_PORT:-3306} --timeout=120 -- node dist/index.js"]
+CMD ["sh", "-c", "./wait-for-it.sh ${DB_HOST:-mysql}:${DB_PORT:-3306} --timeout=300 -- node dist/index.js"]
