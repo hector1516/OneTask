@@ -63,7 +63,7 @@ services:
     build:
       context: ./admin
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        VITE_API_URL: ${VITE_API_URL:-}
     container_name: onetask-admin
     restart: unless-stopped
     depends_on:
