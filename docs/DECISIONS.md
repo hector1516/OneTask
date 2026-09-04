@@ -67,6 +67,14 @@ El Agent ya existe; este repo (API + Admin en Docker) lo orquesta. El Agent hace
   El server solo distribuye el bundle y muestra estado en Admin. Sin endpoints
   de control remoto del overlay.
 
+## Admin web (mobile-first)
+
+- Casi todo el uso será desde el teléfono: UI **mobile-first** (cards, objetivos
+  táctiles ≥48px, `viewport-fit=cover`, `font-size:16px` en inputs para evitar el
+  zoom de iOS, resultados colapsables). Desktop mejora vía media queries.
+- Login, lista dispositivos (online/offline por heartbeat), detalle device →
+  Buffer, botón Encolar, visor de resultados. Usa `VITE_API_URL`.
+
 ## Compatibilidad Agent v0.1.0
 
 - `identifier`: `com.onetask.agent`, `productName`: `OneTask Agent` (no renombrar).

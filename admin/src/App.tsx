@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, isLoggedIn, login, logout } from './api';
-import { useEffect } from 'react';
 
-function useJson<T>(path: string | null, deps: unknown[] = []): { data: T | null; reload: () => void } {
+function useJson<T>(path: string | null): { data: T | null; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -17,32 +16,43 @@ function useJson<T>(path: string | null, deps: unknown[] = []): { data: T | null
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, tick, ...deps]);
+  }, [path, tick]);
   return { data, reload: () => setTick((t) => t + 1) };
 }
 
 function Login() {
   const nav = useNavigate();
   const [u, setU] = useState('admin');
-  const [p, setP] = useState('admin123');
+  const [p, setP] = useState('');
   const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      await login(u, p);
+      nav('/devices');
+    } catch {
+      setErr('Credenciales inválidas');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div className="card">
-      <h2>OneTask Admin — login</h2>
-      <div className="row">
-        <input value={u} onChange={(e) => setU(e.target.value)} placeholder="usuario" />
-        <input value={p} onChange={(e) => setP(e.target.value)} placeholder="contraseña" type="password" />
-        <button
-          onClick={async () => {
-            try {
-              await login(u, p);
-              nav('/devices');
-            } catch {
-              setErr('Credenciales inválidas');
-            }
-          }}
-        >
-          Entrar
+      <h2>OneTask Admin</h2>
+      <div className="stack">
+        <input value={u} onChange={(e) => setU(e.target.value)} placeholder="Usuario" autoComplete="username" />
+        <input
+          value={p}
+          onChange={(e) => setP(e.target.value)}
+          placeholder="Contraseña"
+          type="password"
+          autoComplete="current-password"
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+        />
+        <button className="btn-block" onClick={submit} disabled={busy}>
+          {busy ? 'Entrando…' : 'Entrar'}
         </button>
       </div>
       {err && <p>{err}</p>}
@@ -61,39 +71,36 @@ interface Device {
 
 function Devices() {
   const { data, reload } = useJson<{ devices: Device[] }>('/api/v1/devices');
+  const devices = data?.devices ?? [];
+  const online = devices.filter((d) => d.online).length;
   return (
-    <div className="card">
-      <div className="row">
-        <h2>Dispositivos</h2>
-        <button onClick={reload}>Refrescar</button>
+    <div>
+      <div className="card">
+        <div className="row">
+          <h2 style={{ flex: 1, margin: 0 }}>Dispositivos ({online}/{devices.length} online)</h2>
+          <button className="ghost" onClick={reload}>
+            ↻
+          </button>
+        </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Device</th>
-            <th>Estado</th>
-            <th>Último heartbeat</th>
-            <th>pending / running</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(data?.devices ?? []).map((d) => (
-            <tr key={d.deviceId}>
-              <td>
-                <Link to={`/devices/${encodeURIComponent(d.deviceId)}`}>{d.deviceId}</Link>
-                <div style={{ opacity: 0.7 }}>{d.name}</div>
-              </td>
-              <td>
+      <div className="list">
+        {devices.map((d) => (
+          <Link key={d.deviceId} to={`/devices/${encodeURIComponent(d.deviceId)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="item">
+              <div className="title">{d.deviceId}</div>
+              <div className="sub">{d.name}</div>
+              <div className="meta">
                 <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? 'online' : 'offline'}</span>
-              </td>
-              <td>{d.lastHeartbeat ?? '—'}</td>
-              <td>
-                {d.pending} / {d.running}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                <span className="muted">
+                  ⏳ {d.pending} pending · ▶ {d.running} running
+                </span>
+              </div>
+              <div className="sub">heartbeat: {d.lastHeartbeat ?? '—'}</div>
+            </div>
+          </Link>
+        ))}
+        {devices.length === 0 && <div className="card muted">Sin dispositivos. El Agent aparece aquí tras su primer pull.</div>}
+      </div>
     </div>
   );
 }
@@ -110,22 +117,33 @@ interface QueueItem {
   finishedAt: string | null;
 }
 
+interface ResultRow {
+  moduleId: string;
+  moduleName: string;
+  version: string;
+  status: string;
+  reportedAt: string | null;
+  createdAt: string;
+  raw: unknown;
+}
+
 function DeviceDetail() {
   const { id = '' } = useParams();
   const deviceId = decodeURIComponent(id);
+  const enc = encodeURIComponent(deviceId);
   const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number } }>(
-    `/api/v1/devices/${encodeURIComponent(deviceId)}/status`,
+    `/api/v1/devices/${enc}/status`,
   );
-  const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(
-    `/api/v1/devices/${encodeURIComponent(deviceId)}/queue`,
-  );
-  const results = useJson<{ results: Array<Record<string, unknown>> }>(`/api/v1/devices/${encodeURIComponent(deviceId)}/results`);
-  const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string; description: string } }> }>('/api/v1/modules');
+  const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(`/api/v1/devices/${enc}/queue`);
+  const results = useJson<{ results: ResultRow[] }>(`/api/v1/devices/${enc}/results`);
+  const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string } }> }>('/api/v1/modules');
   const [mod, setMod] = useState('system-monitor');
   const [ver, setVer] = useState('1.0.0');
   const [params, setParams] = useState('{}');
+  const [busy, setBusy] = useState(false);
   const q = queue.data;
   const pct = q && q.total > 0 ? Math.round((q.done / q.total) * 100) : 0;
+  const avail = modules.data?.modules ?? [{ manifest: { id: 'system-monitor', name: 'System Monitor', version: '1.0.0' } }];
 
   const enqueue = async () => {
     let parsed: unknown = {};
@@ -135,10 +153,12 @@ function DeviceDetail() {
       alert('params no es JSON válido');
       return;
     }
-    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(deviceId)}/queue`, {
+    setBusy(true);
+    const r = await apiFetch(`/api/v1/devices/${enc}/queue`, {
       method: 'POST',
       body: JSON.stringify({ moduleId: mod, version: ver, params: parsed }),
     });
+    setBusy(false);
     if (!r.ok) alert(`Encolar falló: ${await r.text()}`);
     else {
       queue.reload();
@@ -149,74 +169,91 @@ function DeviceDetail() {
   return (
     <div>
       <Link to="/devices">← dispositivos</Link>
-      <div className="card">
-        <h2>{deviceId}</h2>
-        <p>
-          <span className={`badge ${status.data?.online ? 'online' : 'offline'}`}>{status.data?.online ? 'online' : 'offline'}</span>{' '}
-          heartbeat: {status.data?.lastHeartbeat ?? '—'}
-        </p>
-        <p>
-          Buffer — total {q?.total ?? 0} · pending {q?.pending ?? 0} · running {q?.running ?? 0} · done {q?.done ?? 0}
+      <div className="card" style={{ marginTop: 8 }}>
+        <h2 style={{ wordBreak: 'break-all' }}>{deviceId}</h2>
+        <div className="meta row">
+          <span className={`badge ${status.data?.online ? 'online' : 'offline'}`}>{status.data?.online ? 'online' : 'offline'}</span>
+          <span className="muted">heartbeat: {status.data?.lastHeartbeat ?? '—'}</span>
+        </div>
+        <p className="muted" style={{ margin: '8px 0' }}>
+          {q?.done ?? 0}/{q?.total ?? 0} done ({pct}%) · {q?.pending ?? 0} pending · {q?.running ?? 0} running
         </p>
         <div className="bar">
           <div style={{ width: `${pct}%` }} />
         </div>
-        <p>
-          {q?.done ?? 0}/{q?.total ?? 0} done ({pct}%)
-        </p>
       </div>
+
       <div className="card">
-        <h3>Encolar módulo (funciona incluso offline)</h3>
-        <div className="row">
+        <h3>Encolar módulo</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Funciona incluso con el Agent offline (cola DEC-007).
+        </p>
+        <div className="stack">
           <select value={mod} onChange={(e) => setMod(e.target.value)}>
-            {(modules.data?.modules ?? [{ manifest: { id: 'system-monitor', name: 'System Monitor', version: '1.0.0', description: '' } }]).map((m) => (
+            {avail.map((m) => (
               <option key={m.manifest.id} value={m.manifest.id}>
                 {m.manifest.name} ({m.manifest.id})
               </option>
             ))}
           </select>
-          <input value={ver} onChange={(e) => setVer(e.target.value)} placeholder="versión" style={{ width: 90 }} />
-          <input value={params} onChange={(e) => setParams(e.target.value)} placeholder='params JSON' style={{ minWidth: 220 }} />
-          <button onClick={enqueue}>Encolar</button>
+          <input value={ver} onChange={(e) => setVer(e.target.value)} placeholder="Versión (p. ej. 1.0.0)" inputMode="text" />
+          <input value={params} onChange={(e) => setParams(e.target.value)} placeholder='Params JSON (p. ej. {"intervalSec":60})' inputMode="text" />
+          <button className="btn-block" onClick={enqueue} disabled={busy}>
+            {busy ? 'Encolando…' : 'Encolar'}
+          </button>
         </div>
       </div>
+
       <div className="card">
-        <h3>Buffer</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>id</th>
-              <th>nombre / descripción</th>
-              <th>status</th>
-              <th>queuedAt / startedAt</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(q?.queue ?? []).map((it) => (
-              <tr key={it.id}>
-                <td>{it.id}</td>
-                <td>
-                  <b>{it.moduleName}</b> <span style={{ opacity: 0.6 }}>({it.moduleId}@{it.version})</span>
-                  <div style={{ opacity: 0.7 }}>{it.moduleDescription}</div>
-                </td>
-                <td>
-                  <span className={`badge ${it.status}`}>{it.status}</span>
-                </td>
-                <td>
-                  {it.queuedAt}
-                  <div style={{ opacity: 0.7 }}>{it.startedAt ?? '—'}</div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <h3>Buffer ({q?.queue?.length ?? 0})</h3>
+        <div className="list">
+          {(q?.queue ?? []).map((it) => (
+            <div className="item" key={it.id}>
+              <div className="title">
+                {it.moduleName} <span className="muted">#{it.id}</span>
+              </div>
+              <div className="sub">
+                {it.moduleId}@{it.version}
+              </div>
+              {it.moduleDescription ? <div className="sub">{it.moduleDescription}</div> : null}
+              <div className="meta">
+                <span className={`badge ${it.status}`}>{it.status}</span>
+                <span className="muted">{it.queuedAt}</span>
+              </div>
+            </div>
+          ))}
+          {(q?.queue?.length ?? 0) === 0 && <div className="muted">Cola vacía.</div>}
+        </div>
       </div>
+
       <div className="card">
         <div className="row">
-          <h3>Resultados</h3>
-          <button onClick={() => { results.reload(); queue.reload(); status.reload(); }}>Refrescar</button>
+          <h3 style={{ flex: 1, margin: 0 }}>Resultados ({results.data?.results?.length ?? 0})</h3>
+          <button
+            className="ghost"
+            onClick={() => {
+              results.reload();
+              queue.reload();
+              status.reload();
+            }}
+          >
+            ↻
+          </button>
         </div>
-        <pre>{JSON.stringify(results.data?.results ?? [], null, 2)}</pre>
+        <div style={{ marginTop: 10 }}>
+          {(results.data?.results ?? []).map((r, i) => (
+            <details className="result" key={`${r.createdAt}-${i}`}>
+              <summary>
+                <span className={`badge ${r.status}`}>{r.status || '—'}</span>
+                <span>
+                  {r.moduleName || r.moduleId}@{r.version}
+                </span>
+              </summary>
+              <pre>{JSON.stringify(r.raw ?? r, null, 2)}</pre>
+            </details>
+          ))}
+          {(results.data?.results?.length ?? 0) === 0 && <div className="muted">Sin resultados todavía.</div>}
+        </div>
       </div>
     </div>
   );
@@ -224,7 +261,7 @@ function DeviceDetail() {
 
 export default function App() {
   const nav = useNavigate();
-  if (!isLoggedIn() && location.pathname !== '/login') {
+  if (!isLoggedIn()) {
     return (
       <div className="wrap">
         <Login />
@@ -233,10 +270,11 @@ export default function App() {
   }
   return (
     <div className="wrap">
-      <nav>
+      <nav className="topnav">
         <b>OneTask Admin</b>
-        <Link to="/devices">Dispositivos</Link>
+        <Link to="/devices">Equipos</Link>
         <button
+          className="ghost"
           onClick={() => {
             logout();
             nav('/login');
