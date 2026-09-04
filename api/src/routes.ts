@@ -167,6 +167,31 @@ router.post(
   }),
 );
 
+// Cancelar misión en buffer (solo pending|running)
+router.delete(
+  '/api/v1/devices/:id/queue/:itemId',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    const itemId = Number(req.params.itemId);
+    if (!deviceId || !itemId) {
+      res.status(400).json({ error: 'deviceId y itemId requeridos' });
+      return;
+    }
+    const [result] = await pool.query(
+      `UPDATE module_queue SET status = 'failed', finishedAt = NOW()
+        WHERE id = ? AND deviceId = ? AND status IN ('pending','running')`,
+      [itemId, deviceId],
+    );
+    const affected = (result as { affectedRows: number }).affectedRows;
+    if (affected === 0) {
+      res.status(404).json({ error: 'misión no encontrada o ya finalizada' });
+      return;
+    }
+    res.json({ ok: true, cancelled: itemId });
+  }),
+);
+
 // Admin: ver Buffer completa + resultados
 router.get(
   '/api/v1/devices/:id/queue',

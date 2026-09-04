@@ -162,7 +162,7 @@ function Devices() {
               <div className="meta">
                 <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? '● En servicio' : '○ Fuera de combate'}</span>
                 <span className="muted">
-                  ⏳ {d.pending} en cola · ▶ {d.running} en curso
+                  ⏳ {d.pending} en buffer · ▶ {d.running} en curso
                 </span>
               </div>
               <div className="sub">parte: {d.lastHeartbeat ?? 'sin contacto'}</div>
@@ -250,6 +250,14 @@ function DeviceDetail() {
     }
   };
 
+  const cancel = async (itemId: number) => {
+    const r = await apiFetch(`/api/v1/devices/${enc}/queue/${itemId}`, { method: 'DELETE' });
+    if (r.ok) {
+      queue.reload();
+      status.reload();
+    }
+  };
+
   return (
     <div>
       <Link to="/devices">← tropas</Link>
@@ -284,7 +292,7 @@ function DeviceDetail() {
           <span className="muted">parte: {status.data?.lastHeartbeat ?? 'sin contacto'}</span>
         </div>
         <p className="muted" style={{ margin: '8px 0' }}>
-          {q?.done ?? 0}/{q?.total ?? 0} DONE ({pct}%) · {q?.pending ?? 0} en cola · {q?.running ?? 0} en curso
+          {q?.done ?? 0}/{q?.total ?? 0} DONE ({pct}%) · {q?.pending ?? 0} en buffer · {q?.running ?? 0} en curso
         </p>
         <div className="bar">
           <div style={{ width: `${pct}%` }} />
@@ -313,7 +321,7 @@ function DeviceDetail() {
       </div>
 
       <div className="card">
-        <h3>Cola de misión ({q?.queue?.length ?? 0})</h3>
+        <h3>Buffer de misión ({q?.queue?.length ?? 0})</h3>
         <div className="list">
           {(q?.queue ?? []).map((it) => (
             <div className="item" key={it.id}>
@@ -327,10 +335,22 @@ function DeviceDetail() {
               <div className="meta">
                 <span className={`badge ${it.status}`}>{STATUS_ES[it.status] ?? it.status}</span>
                 <span className="muted">{it.queuedAt}</span>
+                {(it.status === 'pending' || it.status === 'running') && (
+                  <button
+                    className="ghost"
+                    style={{ marginLeft: 'auto', padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      cancel(it.id);
+                    }}
+                  >
+                    ✕ Cancelar
+                  </button>
+                )}
               </div>
             </div>
           ))}
-          {(q?.queue?.length ?? 0) === 0 && <div className="muted">Cola vacía. ¡Todo DONE, soldado!</div>}
+          {(q?.queue?.length ?? 0) === 0 && <div className="muted">Buffer vacío. ¡Todo DONE, soldado!</div>}
         </div>
       </div>
 

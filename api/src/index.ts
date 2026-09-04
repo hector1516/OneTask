@@ -65,6 +65,28 @@ async function main(): Promise<void> {
 
   const port = Number(process.env.API_PORT ?? process.env.PORT ?? '3000');
   app.listen(port, () => console.log(`[onetask-api] escuchando en :${port} (storage + MySQL listos)`));
+
+  // Auto-limpieza: borra done/failed del buffer y resultados después de BUFFER_TTL_HOURS (def. 24h)
+  const ttlHours = Number(process.env.BUFFER_TTL_HOURS ?? '24');
+  const cleanup = async () => {
+    try {
+      const [q] = await pool.query(
+        `DELETE FROM module_queue WHERE status IN ('done','failed') AND finishedAt < DATE_SUB(NOW(), INTERVAL ? HOUR)`,
+        [ttlHours],
+      );
+      const [r] = await pool.query(
+        `DELETE FROM module_results WHERE created_at < DATE_SUB(NOW(), INTERVAL ? HOUR)`,
+        [ttlHours],
+      );
+      const qDel = (q as { affectedRows: number }).affectedRows;
+      const rDel = (r as { affectedRows: number }).affectedRows;
+      if (qDel > 0 || rDel > 0) console.log(`[cleanup] eliminados ${qDel} buffer + ${rDel} resultados (TTL ${ttlHours}h)`);
+    } catch (err) {
+      console.warn('[cleanup] error:', (err as Error).message);
+    }
+  };
+  setInterval(cleanup, ttlHours * 3600_000); // corre 1x por TTL
+  setTimeout(cleanup, 60_000); // primera limpieza tras 1 min de boot
 }
 
 main().catch((err) => {
