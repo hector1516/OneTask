@@ -3,8 +3,11 @@ import { createHash } from 'node:crypto';
 
 export const PERMISSION_WHITELIST = [
   'system.read',
+  'system.lock',
+  'system.power',
   'fs.read',
   'net.fetch',
+  'net.location',
   'clipboard.read',
   'overlay.show',
   'tray.notify',

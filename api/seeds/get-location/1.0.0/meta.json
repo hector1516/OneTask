@@ -1,0 +1,13 @@
+{
+  "name": "Ubicacion",
+  "description": "Obtiene la ubicacion aproximada por IP usando un servicio publico.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["net.fetch", "net.location", "tray.notify"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "notify": { "type": "boolean", "default": false }
+    }
+  }
+}

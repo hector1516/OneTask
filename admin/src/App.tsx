@@ -448,7 +448,7 @@ export default function App() {
             nav('/login');
           }}
         >
-          Retirada
+          Logout
         </button>
       </nav>
       <Routes>

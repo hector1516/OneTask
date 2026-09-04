@@ -1,0 +1,13 @@
+{
+  "name": "Bloquear PC",
+  "description": "Bloquea la estacion de trabajo de Windows inmediatamente.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.lock", "tray.notify"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "notify": { "type": "boolean", "default": true }
+    }
+  }
+}

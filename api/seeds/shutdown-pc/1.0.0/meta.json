@@ -1,0 +1,14 @@
+{
+  "name": "Apagar PC",
+  "description": "Apaga la maquina de Windows inmediatamente.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.power", "tray.notify"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "delaySec": { "type": "number", "default": 0 },
+      "notify": { "type": "boolean", "default": true }
+    }
+  }
+}
