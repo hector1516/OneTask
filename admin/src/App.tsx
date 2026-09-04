@@ -258,6 +258,15 @@ function DeviceDetail() {
     }
   };
 
+  const cancelAll = async () => {
+    if (!confirm('¿Cancelar TODAS las misiones del buffer?')) return;
+    const r = await apiFetch(`/api/v1/devices/${enc}/queue`, { method: 'DELETE' });
+    if (r.ok) {
+      queue.reload();
+      status.reload();
+    }
+  };
+
   return (
     <div>
       <Link to="/devices">← tropas</Link>
@@ -321,7 +330,18 @@ function DeviceDetail() {
       </div>
 
       <div className="card">
-        <h3>Buffer de misión ({q?.queue?.length ?? 0})</h3>
+        <div className="row">
+          <h3 style={{ flex: 1, margin: 0 }}>Buffer de misión ({q?.queue?.length ?? 0})</h3>
+          {(q?.queue?.length ?? 0) > 0 && (
+            <button
+              className="ghost"
+              style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
+              onClick={cancelAll}
+            >
+              ✕ Borrar todo
+            </button>
+          )}
+        </div>
         <div className="list">
           {(q?.queue ?? []).map((it) => (
             <div className="item" key={it.id}>

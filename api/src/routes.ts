@@ -167,7 +167,25 @@ router.post(
   }),
 );
 
-// Cancelar misión en buffer (solo pending|running)
+// Cancelar TODAS las misiones pending|running de un device
+router.delete(
+  '/api/v1/devices/:id/queue',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    if (!deviceId) {
+      res.status(400).json({ error: 'deviceId requerido' });
+      return;
+    }
+    const [result] = await pool.query(
+      `UPDATE module_queue SET status = 'failed', finishedAt = NOW()
+        WHERE deviceId = ? AND status IN ('pending','running')`,
+      [deviceId],
+    );
+    const cancelled = (result as { affectedRows: number }).affectedRows;
+    res.json({ ok: true, cancelled });
+  }),
+);
 router.delete(
   '/api/v1/devices/:id/queue/:itemId',
   requireAuth,
