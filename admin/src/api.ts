@@ -36,12 +36,17 @@ export async function apiFetch(path: string, init: RequestInit = {}, retried = f
 }
 
 export async function login(username: string, password: string): Promise<void> {
-  const r = await fetch(`${BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-  if (!r.ok) throw new Error('Login inválido');
+  let r: Response;
+  try {
+    r = await fetch(`${BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+  } catch {
+    throw new Error('NETWORK');
+  }
+  if (!r.ok) throw new Error('AUTH');
   const data = (await r.json()) as { accessToken: string; refreshToken: string };
   localStorage.setItem(ACCESS_KEY, data.accessToken);
   localStorage.setItem(REFRESH_KEY, data.refreshToken);

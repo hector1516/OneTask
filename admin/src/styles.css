@@ -1,91 +1,140 @@
-/* OneTask Admin — mobile-first. Base: teléfono (<640px); desktop vía media queries. */
+/* OneTask Command — tema cuartel militar / pixel-art (mobile-first).
+   Paleta del logo: oliva drab, stencil crema, naranja cohete, acero. */
 :root {
   color-scheme: dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --bg: #0f172a;
-  --card: #1e293b;
-  --line: #334155;
-  --txt: #e2e8f0;
-  --muted: #94a3b8;
-  --accent: #0284c7;
-  --radius: 12px;
-  --tap: 48px; /* tamaño táctil mínimo */
+  --stencil: "Arial Black", Impact, Haettenschweiler, sans-serif;
+  --bg: #14160e;
+  --card: #222619;
+  --card2: #1a1e12;
+  --line: #4a5232;
+  --steel: #8f9578;
+  --cream: #ece3c2;
+  --muted: #a8ad8a;
+  --accent: #ff7a1a;
+  --accent-dark: #b34d0c;
+  --olive: #9aa463;
+  --red: #c8321e;
+  --green: #5da23c;
+  --radius: 6px;
+  --tap: 48px;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--txt); -webkit-tap-highlight-color: transparent; }
-a { color: #7dd3fc; }
-h2, h3 { margin: 0 0 12px; font-size: 1.15rem; }
+body {
+  margin: 0; background: var(--bg); color: var(--cream);
+  -webkit-tap-highlight-color: transparent;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 4px);
+}
+a { color: var(--accent); }
+h2, h3 {
+  margin: 0 0 12px; font-family: var(--stencil);
+  text-transform: uppercase; letter-spacing: 1px; font-size: 1.1rem;
+  text-shadow: 2px 2px 0 #000;
+}
+h2 .star, h3 .star { color: var(--accent); }
 
 .wrap { max-width: 1080px; margin: 0 auto; padding: 12px 12px calc(24px + env(safe-area-inset-bottom)); }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; }
+.card {
+  background: var(--card); border: 3px solid var(--line);
+  border-radius: var(--radius); padding: 14px; margin-bottom: 12px;
+  box-shadow: 4px 4px 0 #000;
+}
 .muted { color: var(--muted); font-size: 0.85rem; }
 
-/* Formulario: todo a ancho completo en móvil */
+/* Logos */
+.hero-logo {
+  display: block; width: 100%; max-width: 420px; margin: 0 auto 12px;
+  border: 3px solid var(--line); border-radius: var(--radius);
+  image-rendering: auto;
+}
+.nav-logo { height: 40px; border: 2px solid var(--line); border-radius: 4px; }
+
+/* Formularios */
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 input, select, textarea {
-  width: 100%;
-  min-height: var(--tap);
-  font-size: 16px; /* evita zoom automático en iOS */
-  background: var(--bg); color: var(--txt);
-  border: 1px solid #475569; border-radius: 8px; padding: 10px 12px;
+  width: 100%; min-height: var(--tap);
+  font-size: 16px;
+  background: var(--card2); color: var(--cream);
+  border: 3px solid var(--line); border-radius: var(--radius); padding: 10px 12px;
 }
+input:focus, select:focus { outline: 2px solid var(--accent); }
+
+/* Botones arcade */
 button {
-  min-height: var(--tap);
-  min-width: var(--tap);
-  font-size: 1rem; font-weight: 600;
-  background: var(--accent); color: #fff;
-  border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer;
+  min-height: var(--tap); min-width: var(--tap);
+  font-family: var(--stencil); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;
+  background: var(--accent); color: #1a1005;
+  border: 3px solid #000; border-radius: var(--radius);
+  padding: 12px 18px; cursor: pointer;
+  box-shadow: 4px 4px 0 #000;
 }
-button:active { filter: brightness(1.2); }
+button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
 button:disabled { opacity: 0.5; }
-button.ghost { background: transparent; border: 1px solid #475569; }
+button.ghost { background: var(--card2); color: var(--cream); border-color: var(--line); }
 .btn-block { width: 100%; }
 
-.badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
-.online { background: #14532d; } .offline { background: #7f1d1d; }
-.pending { background: #713f12; } .running { background: #0c4a6e; }
-.done { background: #14532d; } .failed { background: #7f1d1d; }
+.error-box {
+  border: 3px solid var(--red); background: #2a120c; color: #ffb4a2;
+  border-radius: var(--radius); padding: 10px 12px; font-weight: 600;
+}
 
-/* Listas como cards (teléfono) */
+/* Insignias stencil */
+.badge {
+  display: inline-block; padding: 4px 12px; border-radius: 4px;
+  font-family: var(--stencil); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+  border: 2px solid #000; box-shadow: 2px 2px 0 #000; color: #fff;
+}
+.online { background: #2f6b1f; } .offline { background: #6b1f1f; }
+.pending { background: #7a5a12; } .running { background: #1f5a6b; }
+.done { background: #2f6b1f; } .failed { background: var(--red); }
+
+/* Listas como tarjetas de misión */
 .list { display: flex; flex-direction: column; gap: 10px; }
-.item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-.item .title { font-weight: 700; margin-bottom: 4px; word-break: break-all; }
+.item {
+  background: var(--card2); border: 3px solid var(--line);
+  border-radius: var(--radius); padding: 12px; box-shadow: 3px 3px 0 #000;
+}
+.item .title { font-weight: 800; margin-bottom: 4px; word-break: break-all; }
 .item .sub { color: var(--muted); font-size: 0.85rem; word-break: break-word; }
 .item .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .item:active { border-color: var(--accent); }
 
-.bar { height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
-.bar > div { height: 100%; background: #22c55e; }
+/* Barra de misión (franjas de peligro) */
+.bar {
+  height: 14px; background: #0c0e07; border: 3px solid #000; border-radius: 4px; overflow: hidden;
+  outline: 2px solid var(--line);
+}
+.bar > div {
+  height: 100%;
+  background: repeating-linear-gradient(45deg, var(--accent) 0 10px, #ffb066 10px 20px);
+}
 
 pre {
-  background: var(--bg); padding: 12px; border-radius: 8px;
+  background: #0c0e07; color: #c9d1a3; padding: 12px; border-radius: 4px;
+  border: 2px solid var(--line);
   overflow: auto; font-size: 0.75rem; max-height: 50vh;
   white-space: pre-wrap; word-break: break-word;
 }
-details.result { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; }
+details.result { background: var(--card2); border: 3px solid var(--line); border-radius: var(--radius); margin-bottom: 8px; }
 details.result summary { min-height: var(--tap); display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.9rem; }
 
-/* Nav superior compacta + zona segura */
+/* Nav de cuartel */
 .topnav {
   position: sticky; top: 0; z-index: 10;
-  display: flex; gap: 8px; align-items: center;
-  background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(6px);
-  padding: calc(8px + env(safe-area-inset-top)) 4px 8px;
-  margin-bottom: 12px; border-bottom: 1px solid var(--line);
+  display: flex; gap: 10px; align-items: center;
+  background: #1a1e12; border-bottom: 3px solid var(--line);
+  padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
+  margin: 0 -12px 12px; padding-left: 12px; padding-right: 12px;
 }
-.topnav b { flex: 1; font-size: 1.05rem; }
+.topnav .hq { flex: 1; font-family: var(--stencil); text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 #000; }
 .topnav button { min-height: 44px; padding: 8px 14px; }
+.foot { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 16px; letter-spacing: 2px; }
 
-/* Desktop: columnas y tablas */
 @media (min-width: 640px) {
   .wrap { padding: 24px; }
-  .stack-inline { flex-direction: row; }
   input, select { width: auto; }
   .btn-block { width: auto; }
-  table.grid { width: 100%; border-collapse: collapse; font-size: 14px; }
-  table.grid th, table.grid td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-}
-@media (max-width: 639px) {
-  table.grid { display: none; } /* en móvil se usan las cards (.list) */
+  .topnav { margin: 0 0 16px; border: 3px solid var(--line); border-radius: var(--radius); }
 }
