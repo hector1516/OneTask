@@ -1,5 +1,7 @@
 // Cliente API — DEC-003: JWT en localStorage + Authorization: Bearer.
-const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+// BASE vacío = mismo origen (nginx proxya /api, /auth y /health al API).
+// Solo se usa URL absoluta para desarrollo directo contra el API.
+const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 const ACCESS_KEY = 'onetask_access';
 const REFRESH_KEY = 'onetask_refresh';
 

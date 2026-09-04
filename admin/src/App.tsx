@@ -42,7 +42,7 @@ function Login() {
     } catch (e) {
       setErr(
         (e as Error).message === 'NETWORK'
-          ? `Sin conexión con el API (${apiBase}). Revisa WiFi/red.`
+          ? `Sin conexión con el servidor (${apiBase || window.location.host}). Revisa WiFi/red.`
           : 'Credenciales inválidas, soldado.',
       );
     } finally {
