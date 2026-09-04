@@ -50,6 +50,8 @@ services:
       - modules_storage:/app/storage
       # Seed sources (read-only) so the API can (re)generate bundles on boot:
       - ./api/seeds:/app/seeds:ro
+      # Persistent signing key
+      - ./onetask-signing.key:/app/onetask-signing.key:ro
     networks:
       - onetask
     healthcheck:

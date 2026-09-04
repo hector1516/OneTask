@@ -39,13 +39,23 @@ function fromSeed32(seed: Buffer): KeyPair {
   return { privateKey, publicKey };
 }
 
-/** Accepts: base64/hex 32-byte seed, base64 PKCS8 DER, or 'generate' (ephemeral dev). */
+/** Accepts: file path (starts with / or ./ or contains :), base64/hex 32-byte seed, base64 PKCS8 DER, or 'generate' (ephemeral dev). */
 export function loadSigningKeys(): KeyPair & { ephemeral: boolean } {
-  const raw = (process.env.MODULE_SIGNING_PRIVATE_KEY ?? '').trim();
+  let raw = (process.env.MODULE_SIGNING_PRIVATE_KEY ?? '').trim();
   if (!raw || raw === 'generate') {
     if (!raw) console.warn('[signer] MODULE_SIGNING_PRIVATE_KEY vacío: usando clave efímera (solo dev).');
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
     return { privateKey, publicKey, ephemeral: true };
+  }
+  // If it looks like a file path, read the key from file
+  if (/^[\\/]|^[A-Z]:|^\./.test(raw)) {
+    try {
+      const keyData = require('node:fs').readFileSync(raw, 'utf8').trim();
+      raw = keyData;
+      console.log(`[signer] clave leída de archivo: ${process.env.MODULE_SIGNING_PRIVATE_KEY}`);
+    } catch (err) {
+      console.error(`[signer] no se pudo leer archivo de clave: ${raw}`, (err as Error).message);
+    }
   }
   // Try base64 DER PKCS8
   try {
@@ -69,7 +79,7 @@ export function loadSigningKeys(): KeyPair & { ephemeral: boolean } {
   })();
   const seed = seedHex ?? seedB64;
   if (seed) return { ...fromSeed32(seed), ephemeral: false };
-  throw new Error('MODULE_SIGNING_PRIVATE_KEY con formato no reconocido (usa base64 PKCS8 DER o seed de 32 bytes).');
+  throw new Error('MODULE_SIGNING_PRIVATE_KEY con formato no reconocido (usa archivo, base64 PKCS8 DER, o seed de 32 bytes).');
 }
 
 export function publicKeyBase64(publicKey: ReturnType<typeof createPublicKey>): string {
