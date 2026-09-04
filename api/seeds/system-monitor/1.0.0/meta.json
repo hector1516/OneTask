@@ -1,0 +1,14 @@
+{
+  "name": "System Monitor",
+  "description": "Mock de telemetría del sistema (CPU/memoria) para validar el pipeline pull → ejecución → reporte.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.read", "tray.notify"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "intervalSec": { "type": "number", "default": 60 },
+      "notifyOnHighCpu": { "type": "boolean", "default": false }
+    }
+  }
+}
