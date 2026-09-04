@@ -51,7 +51,7 @@ function Login() {
   };
   return (
     <div className="card">
-      <img className="hero-logo" src="/logo.jpg" alt="OneTask Command" />
+      <img className="hero-logo" src="/logo-white.png" alt="OneTask Command" />
       <h2 style={{ textAlign: 'center' }}>
         <span className="star">★</span> Cuartel General <span className="star">★</span>
       </h2>
@@ -438,7 +438,7 @@ export default function App() {
   return (
     <div className="wrap">
       <nav className="topnav">
-        <img className="nav-logo" src="/logo.jpg" alt="OneTask" />
+        <img className="nav-logo" src="/logo-white.png" alt="OneTask" />
         <span className="hq">OneTask Command</span>
         <Link to="/devices">Tropas</Link>
         <button
