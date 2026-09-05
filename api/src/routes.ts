@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { login, refresh } from './auth';
-import { AuthedRequest, deviceIdOf, requireAuth } from './middleware';
+import { AuthedRequest, deviceIdOf, requireAuth, requireDevice } from './middleware';
 import { bundleUrlFor, getPublicKeyB64, listModules, publishModule, readBundle, STORAGE_ROOT } from './modules';
 import { onlineThresholdSec, pool } from './db';
 
@@ -49,6 +49,7 @@ async function ensureDevice(id: string, name?: string, ip?: string): Promise<voi
   await pool.query('INSERT IGNORE INTO devices (id, name) VALUES (?, ?)', [id, name ?? id]);
   const sets = ['last_heartbeat = NOW()'];
   const vals: unknown[] = [];
+  if (name) { sets.push('name = ?'); vals.push(name); }
   if (ip) { sets.push('ip_address = ?'); vals.push(ip); }
   vals.push(id);
   await pool.query(`UPDATE devices SET ${sets.join(', ')} WHERE id = ?`, vals);
@@ -78,11 +79,12 @@ function toIso(v: unknown): string | null {
 // ---------- Agent pull: módulos ----------
 router.get(
   '/api/v1/me/modules',
-  requireAuth,
+  requireDevice,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const deviceId = deviceIdOf(req);
-    console.log(`[agent] GET /me/modules deviceId=${deviceId} core=${req.headers['x-core-version'] ?? '?'} minCore=${req.query.minCoreVersion ?? '?'}`);
-    if (deviceId) await ensureDevice(deviceId, undefined, req.ip);
+    const deviceName = typeof req.headers['x-device-name'] === 'string' ? (req.headers['x-device-name'] as string) : undefined;
+    console.log(`[agent] GET /me/modules deviceId=${deviceId} name=${deviceName ?? '?'} core=${req.headers['x-core-version'] ?? '?'} minCore=${req.query.minCoreVersion ?? '?'}`);
+    if (deviceId) await ensureDevice(deviceId, deviceName, req.ip);
     const minCore = typeof req.query.minCoreVersion === 'string' ? req.query.minCoreVersion : undefined;
     const all = await listModules();
     // Filtro por minCoreVersion del core del Agent (semver laxa: prefijo numérico).
@@ -109,15 +111,16 @@ function compareCore(a: string, b: string): number {
 // ---------- Agent pull: cola (DEC-007) ----------
 router.get(
   '/api/v1/me/queue',
-  requireAuth,
+  requireDevice,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const deviceId = deviceIdOf(req);
-    console.log(`[agent] GET /me/queue deviceId=${deviceId} core=${req.headers['x-core-version'] ?? '?'} ua=${(req.headers['user-agent'] as string)?.substring(0, 60) ?? '?'}`);
+    const deviceName = typeof req.headers['x-device-name'] === 'string' ? (req.headers['x-device-name'] as string) : undefined;
+    console.log(`[agent] GET /me/queue deviceId=${deviceId} name=${deviceName ?? '?'} core=${req.headers['x-core-version'] ?? '?'} ua=${(req.headers['user-agent'] as string)?.substring(0, 60) ?? '?'}`);
     if (!deviceId) {
       res.status(400).json({ error: 'deviceId requerido (?deviceId= o X-Device-Id)' });
       return;
     }
-    await ensureDevice(deviceId, undefined, req.ip);
+    await ensureDevice(deviceId, deviceName, req.ip);
     const [rows] = await pool.query(
       `SELECT q.id, q.moduleId, COALESCE(m.name, q.moduleId) moduleName,
               COALESCE(m.description, '') moduleDescription, q.version, q.params, q.priority, q.status,
@@ -287,15 +290,16 @@ router.delete(
 //   queue:{total,pending,running,done}, execution:{status,queuedAt,startedAt,finishedAt}, reportedAt}
 router.post(
   '/api/v1/results',
-  requireAuth,
+  requireDevice,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    console.log(`[agent] POST /results deviceId=${req.body?.deviceId} module=${req.body?.module?.id} status=${req.body?.execution?.status}`);
+    const deviceName = typeof req.headers['x-device-name'] === 'string' ? (req.headers['x-device-name'] as string) : undefined;
+    console.log(`[agent] POST /results deviceId=${req.body?.deviceId} name=${deviceName ?? '?'} module=${req.body?.module?.id} status=${req.body?.execution?.status}`);
     const { deviceId, module, queue, execution, reportedAt } = req.body ?? {};
     if (!deviceId) {
       res.status(400).json({ error: 'deviceId requerido' });
       return;
     }
-    await ensureDevice(String(deviceId), typeof module?.name === 'string' ? undefined : undefined);
+    await ensureDevice(String(deviceId), deviceName);
     const toDate = (v: unknown): string | null => {
       if (!v) return null;
       const d = new Date(String(v));

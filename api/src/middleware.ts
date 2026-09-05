@@ -22,6 +22,27 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
   }
 }
 
+/** Agent access: permite sin JWT si manda X-Device-Id o ?deviceId=. */
+export function requireDevice(req: AuthedRequest, res: Response, next: NextFunction): void {
+  const deviceId = deviceIdOf(req);
+  if (!deviceId) {
+    res.status(400).json({ error: 'deviceId requerido (?deviceId= o X-Device-Id)' });
+    return;
+  }
+  // Si hay Bearer token, lo validamos (Admin access)
+  const header = req.headers.authorization ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (token) {
+    try {
+      const payload = verifyAccess(token);
+      req.user = { id: payload.sub, username: payload.username };
+    } catch {
+      // Token inválido — ignoramos, el deviceId es suficiente para Agent
+    }
+  }
+  next();
+}
+
 /** deviceId via query ?deviceId= o header X-Device-Id (Agent pull). */
 export function deviceIdOf(req: Request): string {
   const q = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
