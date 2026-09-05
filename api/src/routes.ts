@@ -271,6 +271,17 @@ router.get(
   }),
 );
 
+router.delete(
+  '/api/v1/devices/:id/results',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
+    const [result] = await pool.query('DELETE FROM module_results WHERE device_id = ?', [deviceId]);
+    res.json({ ok: true, deleted: (result as { affectedRows: number }).affectedRows });
+  }),
+);
+
 // ---------- Agent push: resultados (DEC-007) ----------
 // POST /api/v1/results {deviceId, module:{id,name,description,version},
 //   queue:{total,pending,running,done}, execution:{status,queuedAt,startedAt,finishedAt}, reportedAt}

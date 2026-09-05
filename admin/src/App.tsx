@@ -3,9 +3,9 @@ import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { apiBase, apiFetch, isLoggedIn, login, logout } from './api';
 
 const STATUS_ES: Record<string, string> = {
-  pending: '⏳ EN COLA',
+  pending: '⏳ EN BUFFER',
   running: '▶ EN CURSO',
-  done: '★ ¡DONE!',
+  done: '★ COMPLETADO',
   failed: '✖ FALLO',
 };
 
@@ -43,7 +43,7 @@ function Login() {
       setErr(
         (e as Error).message === 'NETWORK'
           ? `Sin conexión con el servidor (${apiBase || window.location.host}). Revisa WiFi/red.`
-          : 'Credenciales inválidas, soldado.',
+          : 'Credenciales inválidas.',
       );
     } finally {
       setBusy(false);
@@ -53,7 +53,7 @@ function Login() {
     <div className="card">
       <img className="hero-logo" src="/logo-white.png" alt="OneTask Command" />
       <h2 style={{ textAlign: 'center' }}>
-        <span className="star">★</span> Cuartel General <span className="star">★</span>
+        <span className="star">★</span> OneTask Command <span className="star">★</span>
       </h2>
       <div className="stack">
         <input value={u} onChange={(e) => setU(e.target.value)} placeholder="Usuario" autoComplete="username" autoCapitalize="off" />
@@ -66,7 +66,7 @@ function Login() {
           onKeyDown={(e) => e.key === 'Enter' && submit()}
         />
         <button className="btn-block" onClick={submit} disabled={busy}>
-          {busy ? 'Desplegando…' : '★ ¡Desplegar! ★'}
+          {busy ? 'Conectando…' : '★ Entrar ★'}
         </button>
       </div>
       {err && (
@@ -114,7 +114,7 @@ function Devices() {
       <div className="card">
         <div className="row">
           <h2 style={{ flex: 1, margin: 0 }}>
-            <span className="star">★</span> Tropas {online}/{devices.length} en servicio
+            <span className="star">★</span> Dispositivos {online}/{devices.length} online
           </h2>
           <button className="ghost" onClick={reload}>
             ↻
@@ -162,16 +162,16 @@ function Devices() {
               <div className="sub">{d.deviceId}</div>
               {d.ipAddress && <div className="sub" style={{ color: 'var(--accent)' }}>IP: {d.ipAddress}</div>}
               <div className="meta">
-                <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? '● En servicio' : '○ Fuera de combate'}</span>
+                <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? '● Online' : '○ Offline'}</span>
                 <span className="muted">
                   ⏳ {d.pending} en buffer · ▶ {d.running} en curso
                 </span>
               </div>
-              <div className="sub">parte: {d.lastHeartbeat ?? 'sin contacto'}</div>
+              <div className="sub">Último contacto: {d.lastHeartbeat ?? 'sin contacto'}</div>
             </div>
           </Link>
         ))}
-        {devices.length === 0 && <div className="card muted">Sin tropas. El Agent se presenta tras su primer pull.</div>}
+        {devices.length === 0 && <div className="card muted">Sin dispositivos. El Agent se presenta tras su primer pull.</div>}
       </div>
     </div>
   );
@@ -245,7 +245,7 @@ function DeviceDetail() {
       body: JSON.stringify({ moduleId: mod, version: ver, params: parsed }),
     });
     setBusy(false);
-    if (!r.ok) alert(`Misión abortada: ${await r.text()}`);
+    if (!r.ok) alert(`Error: ${await r.text()}`);
     else {
       queue.reload();
       status.reload();
@@ -261,7 +261,7 @@ function DeviceDetail() {
   };
 
   const cancelAll = async () => {
-    if (!confirm('¿Cancelar TODAS las misiones del buffer?')) return;
+    if (!confirm('¿Cancelar todas las tareas del buffer?')) return;
     const r = await apiFetch(`/api/v1/devices/${enc}/queue`, { method: 'DELETE' });
     if (r.ok) {
       queue.reload();
@@ -278,9 +278,15 @@ function DeviceDetail() {
     }
   };
 
+  const clearResults = async () => {
+    if (!confirm('¿Borrar todos los resultados de este dispositivo?')) return;
+    const r = await apiFetch(`/api/v1/devices/${enc}/results`, { method: 'DELETE' });
+    if (r.ok) results.reload();
+  };
+
   return (
     <div>
-      <Link to="/devices">← tropas</Link>
+      <Link to="/devices">← dispositivos</Link>
       <div className="card" style={{ marginTop: 8 }}>
         <div className="row">
           <h2 style={{ flex: 1, margin: 0, wordBreak: 'break-all' }}>
@@ -308,11 +314,11 @@ function DeviceDetail() {
         </div>
         <div className="muted" style={{ wordBreak: 'break-all' }}>ID: {deviceId}</div>
         <div className="meta row" style={{ marginTop: 8 }}>
-          <span className={`badge ${status.data?.online ? 'online' : 'offline'}`}>{status.data?.online ? '● En servicio' : '○ Fuera de combate'}</span>
-          <span className="muted">parte: {status.data?.lastHeartbeat ?? 'sin contacto'}</span>
+          <span className={`badge ${status.data?.online ? 'online' : 'offline'}`}>{status.data?.online ? '● Online' : '○ Offline'}</span>
+          <span className="muted">Último contacto: {status.data?.lastHeartbeat ?? 'sin contacto'}</span>
         </div>
         <p className="muted" style={{ margin: '8px 0' }}>
-          {q?.done ?? 0}/{q?.total ?? 0} DONE ({pct}%) · {q?.pending ?? 0} en buffer · {q?.running ?? 0} en curso
+          {q?.done ?? 0}/{q?.total ?? 0} completados ({pct}%) · {q?.pending ?? 0} en buffer · {q?.running ?? 0} en curso
         </p>
         <div className="bar">
           <div style={{ width: `${pct}%` }} />
@@ -320,9 +326,9 @@ function DeviceDetail() {
       </div>
 
       <div className="card">
-        <h3>＋ Nueva misión</h3>
+        <h3>＋ Enviar módulo</h3>
         <p className="muted" style={{ marginTop: 0 }}>
-          Llega al Agent en su próximo pull, aunque esté offline (DEC-007).
+          Llega al Agent en su próximo pull, aunque esté offline.
         </p>
         <div className="stack">
           <select value={mod} onChange={(e) => setMod(e.target.value)}>
@@ -335,14 +341,14 @@ function DeviceDetail() {
           <input value={ver} onChange={(e) => setVer(e.target.value)} placeholder="Versión (p. ej. 1.0.0)" />
           <input value={params} onChange={(e) => setParams(e.target.value)} placeholder='Params JSON (p. ej. {"intervalSec":60})' />
           <button className="btn-block" onClick={enqueue} disabled={busy}>
-            {busy ? 'Transmitiendo…' : '▶ ¡Ordenar misión!'}
+            {busy ? 'Enviando…' : '▶ Enviar al agente'}
           </button>
         </div>
       </div>
 
       <div className="card">
         <div className="row">
-          <h3 style={{ flex: 1, margin: 0 }}>Buffer de misión ({q?.queue?.length ?? 0})</h3>
+          <h3 style={{ flex: 1, margin: 0 }}>Buffer ({q?.queue?.length ?? 0})</h3>
           {(q?.queue?.length ?? 0) > 0 && (
             <>
               <button
@@ -390,13 +396,20 @@ function DeviceDetail() {
               </div>
             </div>
           ))}
-          {(q?.queue?.length ?? 0) === 0 && <div className="muted">Buffer vacío. ¡Todo DONE, soldado!</div>}
+          {(q?.queue?.length ?? 0) === 0 && <div className="muted">Buffer vacío. Todo completado.</div>}
         </div>
       </div>
 
       <div className="card">
         <div className="row">
-          <h3 style={{ flex: 1, margin: 0 }}>Partes de misión ({results.data?.results?.length ?? 0})</h3>
+          <h3 style={{ flex: 1, margin: 0 }}>Módulos completados ({results.data?.results?.length ?? 0})</h3>
+          <button
+            className="ghost"
+            onClick={clearResults}
+            style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
+          >
+            ✕ Borrar todos
+          </button>
           <button
             className="ghost"
             onClick={() => {
@@ -420,7 +433,7 @@ function DeviceDetail() {
               <pre>{JSON.stringify(r.raw ?? r, null, 2)}</pre>
             </details>
           ))}
-          {(results.data?.results?.length ?? 0) === 0 && <div className="muted">Sin partes todavía.</div>}
+          {(results.data?.results?.length ?? 0) === 0 && <div className="muted">Sin resultados aún.</div>}
         </div>
       </div>
     </div>
@@ -442,7 +455,7 @@ export default function App() {
       <nav className="topnav">
         <img className="nav-logo" src="/logo-white.png" alt="OneTask" />
         <span className="hq">OneTask Command</span>
-        <Link to="/devices">Tropas</Link>
+        <Link to="/devices">Dispositivos</Link>
         <button
           className="ghost"
           onClick={() => {
