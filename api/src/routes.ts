@@ -388,6 +388,17 @@ router.put(
   }),
 );
 
+router.delete(
+  '/api/v1/devices/:id',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
+    await pool.query('DELETE FROM devices WHERE id = ?', [deviceId]);
+    res.json({ ok: true, deleted: deviceId });
+  }),
+);
+
 router.get(
   '/api/v1/devices/:id/status',
   requireAuth,

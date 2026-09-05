@@ -95,6 +95,9 @@ function Devices() {
   const online = devices.filter((d) => d.online).length;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newNames, setNewNames] = useState<Record<string, string>>({});
+  const [adding, setAdding] = useState(false);
+  const [newDeviceId, setNewDeviceId] = useState('');
+  const [newDeviceName, setNewDeviceName] = useState('');
 
   const rename = async (deviceId: string) => {
     const name = newNames[deviceId]?.trim();
@@ -109,6 +112,28 @@ function Devices() {
     }
   };
 
+  const removeDevice = async (deviceId: string) => {
+    if (!confirm(`¿Eliminar "${deviceId}"?`)) return;
+    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
+    if (r.ok) reload();
+  };
+
+  const addDevice = async () => {
+    const id = newDeviceId.trim();
+    const name = newDeviceName.trim() || id;
+    if (!id) return;
+    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+    if (r.ok) {
+      setAdding(false);
+      setNewDeviceId('');
+      setNewDeviceName('');
+      reload();
+    }
+  };
+
   return (
     <div>
       <div className="card">
@@ -116,10 +141,20 @@ function Devices() {
           <h2 style={{ flex: 1, margin: 0 }}>
             <span className="star">★</span> Dispositivos {online}/{devices.length} online
           </h2>
+          <button className="ghost" onClick={() => setAdding(!adding)}>
+            {adding ? '✕' : '＋ Agregar'}
+          </button>
           <button className="ghost" onClick={reload}>
             ↻
           </button>
         </div>
+        {adding && (
+          <div className="stack" style={{ marginTop: 10 }}>
+            <input value={newDeviceId} onChange={(e) => setNewDeviceId(e.target.value)} placeholder="Device ID (ej: mi-pc)" />
+            <input value={newDeviceName} onChange={(e) => setNewDeviceName(e.target.value)} placeholder="Nombre (ej: PC de Hector)" />
+            <button className="btn-block" onClick={addDevice}>Agregar dispositivo</button>
+          </div>
+        )}
       </div>
       <div className="list">
         {devices.map((d) => (
@@ -138,6 +173,17 @@ function Devices() {
                   }}
                 >
                   ✎
+                </button>
+                <button
+                  className="ghost"
+                  style={{ marginLeft: 4, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto', color: '#c44' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeDevice(d.deviceId);
+                  }}
+                >
+                  ✕
                 </button>
               </div>
               {editingId === d.deviceId && (
