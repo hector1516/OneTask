@@ -1,4 +1,5 @@
 // get-location 1.0.0 — Obtiene ubicacion aproximada por IP.
+// Core SDK: ctx.fetch() o fetch nativo del sandbox
 
 const now = () => new Date().toISOString();
 
@@ -7,7 +8,11 @@ export default {
   version: '1.0.0',
   async run(params = {}, ctx = {}) {
     try {
-      const resp = await fetch('https://ipapi.co/json/');
+      const fetchFn = ctx.fetch ?? globalThis.fetch;
+      if (!fetchFn) {
+        return { ok: false, error: 'fetch not available', queriedAt: now() };
+      }
+      const resp = await fetchFn('https://ipapi.co/json/');
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       const location = {
