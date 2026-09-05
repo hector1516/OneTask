@@ -44,10 +44,14 @@ router.get(['/api/v1/public-key', '/public-key'], (_req, res) => {
 });
 
 // ---------- helpers queue/devices ----------
-async function ensureDevice(id: string, name?: string): Promise<void> {
+async function ensureDevice(id: string, name?: string, ip?: string): Promise<void> {
   if (!id) return;
   await pool.query('INSERT IGNORE INTO devices (id, name) VALUES (?, ?)', [id, name ?? id]);
-  await pool.query('UPDATE devices SET last_heartbeat = NOW() WHERE id = ?', [id]);
+  const sets = ['last_heartbeat = NOW()'];
+  const vals: unknown[] = [];
+  if (ip) { sets.push('ip_address = ?'); vals.push(ip); }
+  vals.push(id);
+  await pool.query(`UPDATE devices SET ${sets.join(', ')} WHERE id = ?`, vals);
 }
 
 async function queueSummary(deviceId: string): Promise<{ total: number; pending: number; running: number; done: number }> {
@@ -78,7 +82,7 @@ router.get(
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const deviceId = deviceIdOf(req);
     console.log(`[agent] GET /me/modules deviceId=${deviceId} core=${req.headers['x-core-version'] ?? '?'} minCore=${req.query.minCoreVersion ?? '?'}`);
-    if (deviceId) await ensureDevice(deviceId);
+    if (deviceId) await ensureDevice(deviceId, undefined, req.ip);
     const minCore = typeof req.query.minCoreVersion === 'string' ? req.query.minCoreVersion : undefined;
     const all = await listModules();
     // Filtro por minCoreVersion del core del Agent (semver laxa: prefijo numérico).
@@ -113,7 +117,7 @@ router.get(
       res.status(400).json({ error: 'deviceId requerido (?deviceId= o X-Device-Id)' });
       return;
     }
-    await ensureDevice(deviceId);
+    await ensureDevice(deviceId, undefined, req.ip);
     const [rows] = await pool.query(
       `SELECT q.id, q.moduleId, COALESCE(m.name, q.moduleId) moduleName,
               COALESCE(m.description, '') moduleDescription, q.version, q.params, q.priority, q.status,
@@ -334,7 +338,7 @@ router.get(
   asyncHandler(async (_req: AuthedRequest, res: Response) => {
     const threshold = onlineThresholdSec();
     const [rows] = await pool.query(
-      `SELECT d.id deviceId, d.id id, d.name,
+      `SELECT d.id deviceId, d.id id, d.name, d.ip_address ipAddress,
               d.last_heartbeat lastHeartbeat,
               (d.last_heartbeat > DATE_SUB(NOW(), INTERVAL ? SECOND)) online,
               (SELECT COUNT(*) FROM module_queue q WHERE q.deviceId = d.id AND q.status='pending') pending,

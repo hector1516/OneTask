@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS devices (
   id VARCHAR(128) PRIMARY KEY,
   name VARCHAR(255) NOT NULL DEFAULT '',
   owner_user_id CHAR(36) NULL,
+  ip_address VARCHAR(45) NULL DEFAULT NULL,
   last_heartbeat TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -105,6 +106,17 @@ export async function migrate(): Promise<void> {
         await conn.query(sql);
       } catch {
         /* already exists — ignore */
+      }
+    }
+    // Migrations: add columns if missing
+    const migrations = [
+      `ALTER TABLE devices ADD COLUMN ip_address VARCHAR(45) NULL DEFAULT NULL AFTER owner_user_id`,
+    ];
+    for (const sql of migrations) {
+      try {
+        await conn.query(sql);
+      } catch {
+        /* column already exists — ignore */
       }
     }
   } finally {

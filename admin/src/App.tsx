@@ -82,6 +82,7 @@ interface Device {
   deviceId: string;
   id: string;
   name: string;
+  ipAddress: string | null;
   online: boolean;
   lastHeartbeat: string | null;
   pending: number;
@@ -159,6 +160,7 @@ function Devices() {
                 </div>
               )}
               <div className="sub">{d.deviceId}</div>
+              {d.ipAddress && <div className="sub" style={{ color: 'var(--accent)' }}>IP: {d.ipAddress}</div>}
               <div className="meta">
                 <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? '● En servicio' : '○ Fuera de combate'}</span>
                 <span className="muted">
