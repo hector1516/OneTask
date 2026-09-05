@@ -445,7 +445,7 @@ router.post(
 
 router.get(
   '/api/v1/modules/:id/:version/manifest.json',
-  requireAuth,
+  requireDevice,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const { manifest } = await readBundle(req.params.id, req.params.version);
     res.json(manifest);
@@ -454,7 +454,7 @@ router.get(
 
 router.get(
   '/api/v1/modules/:id/:version/bundle.js',
-  requireAuth,
+  requireDevice,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     console.log(`[agent] GET /modules/${req.params.id}/${req.params.version}/bundle.js`);
     const { code } = await readBundle(req.params.id, req.params.version);
