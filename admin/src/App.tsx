@@ -468,17 +468,37 @@ function DeviceDetail() {
           </button>
         </div>
         <div style={{ marginTop: 10 }}>
-          {(results.data?.results ?? []).map((r, i) => (
-            <details className="result" key={`${r.createdAt}-${i}`}>
-              <summary>
-                <span className={`badge ${r.status}`}>{STATUS_ES[r.status] ?? r.status ?? '—'}</span>
-                <span>
-                  {r.moduleName || r.moduleId}@{r.version}
-                </span>
-              </summary>
-              <pre>{JSON.stringify(r.raw ?? r, null, 2)}</pre>
-            </details>
-          ))}
+          {(results.data?.results ?? []).map((r, i) => {
+            const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
+            const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
+            const loc = (typeof output.location === 'object' && output.location !== null ? output.location : null) as { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } | null;
+            return (
+              <details className="result" key={`${r.createdAt}-${i}`}>
+                <summary>
+                  <span className={`badge ${r.status}`}>{STATUS_ES[r.status] ?? r.status ?? '—'}</span>
+                  <span>
+                    {r.moduleName || r.moduleId}@{r.version}
+                  </span>
+                </summary>
+                <div style={{ marginTop: 6 }}>
+                  {loc && loc.lat && loc.lon && (
+                    <div style={{ marginBottom: 8 }}>
+                      <span className="sub">📍 {loc.city}, {loc.region}, {loc.country} — IP: {loc.ip}</span>
+                      <a
+                        href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-block', marginLeft: 8, padding: '3px 10px', background: 'var(--accent)', color: '#000', borderRadius: 4, fontSize: '0.8rem', textDecoration: 'none' }}
+                      >
+                        Abrir en Google Maps
+                      </a>
+                    </div>
+                  )}
+                  <pre>{JSON.stringify(raw, null, 2)}</pre>
+                </div>
+              </details>
+            );
+          })}
           {(results.data?.results?.length ?? 0) === 0 && <div className="muted">Sin resultados aún.</div>}
         </div>
       </div>
