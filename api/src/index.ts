@@ -85,8 +85,8 @@ async function main(): Promise<void> {
       console.warn('[cleanup] error:', (err as Error).message);
     }
   };
-  setInterval(cleanup, ttlHours * 3600_000); // corre 1x por TTL
-  setTimeout(cleanup, 60_000); // primera limpieza tras 1 min de boot
+  setInterval(cleanup, ttlHours * 3600_000);
+  setTimeout(cleanup, 60_000);
 }
 
 main().catch((err) => {

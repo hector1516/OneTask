@@ -86,6 +86,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS device_system_info (
+  device_id VARCHAR(128) PRIMARY KEY,
+  info JSON NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 `;
 
 export async function migrate(): Promise<void> {
@@ -122,6 +127,15 @@ export async function migrate(): Promise<void> {
   } finally {
     conn.release();
   }
+}
+
+export async function cleanupOldData(): Promise<void> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(`DELETE FROM module_results WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)`);
+    await conn.query(`DELETE FROM module_queue WHERE status IN ('done','failed') AND finishedAt < DATE_SUB(NOW(), INTERVAL 7 DAY)`);
+  } catch { /* ignore */ }
+  finally { conn.release(); }
 }
 
 export function onlineThresholdSec(): number {

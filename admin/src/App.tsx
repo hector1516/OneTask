@@ -255,6 +255,7 @@ function DeviceDetail() {
   const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(`/api/v1/devices/${enc}/queue`);
   const results = useJson<{ results: ResultRow[] }>(`/api/v1/devices/${enc}/results`);
   const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string } }> }>('/api/v1/modules');
+  const sysInfo = useJson<{ info: Record<string, unknown> | null; updatedAt: string | null }>(`/api/v1/devices/${enc}/info`);
   const [mod, setMod] = useState('system-monitor');
   const [ver, setVer] = useState('1.0.0');
   const [params, setParams] = useState('{}');
@@ -370,6 +371,84 @@ function DeviceDetail() {
           <div style={{ width: `${pct}%` }} />
         </div>
       </div>
+
+      {sysInfo.data?.info && (() => {
+        const info = sysInfo.data.info as Record<string, any>;
+        const os = info.os as Record<string, any> | undefined;
+        const cpu = info.cpu as Record<string, any> | undefined;
+        const uptime = info.uptime as Record<string, any> | undefined;
+        const disks = Array.isArray(info.disks) ? info.disks : [];
+        const gpuList = Array.isArray(info.gpu) ? info.gpu : [];
+        const ips = Array.isArray(info.ipAddresses) ? info.ipAddresses : [];
+        const wifi = info.wifi as Record<string, any> | undefined;
+        return (
+          <div className="card">
+            <h3>Información del Sistema</h3>
+            <div className="muted" style={{ marginBottom: 8 }}>Actualizado: {sysInfo.data.updatedAt ?? 'desconocido'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+              {os && (
+                <div className="item">
+                  <div className="title">Sistema Operativo</div>
+                  <div className="sub">{os.name} {os.version}</div>
+                  <div className="sub">Build: {os.build} | {os.arch}</div>
+                  <div className="sub">Usuario: {os.user}</div>
+                </div>
+              )}
+              {cpu && (
+                <div className="item">
+                  <div className="title">CPU</div>
+                  <div className="sub">{cpu.model}</div>
+                  <div className="sub">{cpu.cores} núcleos / {cpu.threads} hilos</div>
+                  <div className="sub">Uso: {cpu.load}% | {cpu.currentMHz} MHz</div>
+                </div>
+              )}
+              {uptime && (
+                <div className="item">
+                  <div className="title">Memoria RAM</div>
+                  <div className="sub">Total: {uptime.totalMemMB} MB</div>
+                  <div className="sub">Usada: {uptime.usedMemMB} MB ({uptime.memPercent}%)</div>
+                  <div className="sub">Libre: {uptime.freeMemMB} MB</div>
+                </div>
+              )}
+              {disks.map((d: any, i: number) => (
+                <div className="item" key={i}>
+                  <div className="title">Disco {d.letter}</div>
+                  <div className="sub">{d.label || 'Sin nombre'} | {d.fs}</div>
+                  <div className="sub">Total: {d.totalGB} GB</div>
+                  <div className="sub">Usado: {d.usedGB} GB | Libre: {d.freeGB} GB</div>
+                </div>
+              ))}
+              {gpuList.map((g: any, i: number) => (
+                <div className="item" key={i}>
+                  <div className="title">Gráfica</div>
+                  <div className="sub">{g.name}</div>
+                  {g.vramMB && <div className="sub">VRAM: {g.vramMB} MB</div>}
+                  {g.driver && <div className="sub">Driver: {g.driver}</div>}
+                </div>
+              ))}
+              {info.hostname && (
+                <div className="item">
+                  <div className="title">Hostname</div>
+                  <div className="sub">{info.hostname}</div>
+                </div>
+              )}
+              {ips.map((ip: any, i: number) => (
+                <div className="item" key={i}>
+                  <div className="title">IP ({ip.interface})</div>
+                  <div className="sub">{ip.ip}/{ip.prefix}</div>
+                </div>
+              ))}
+              {wifi?.ssid && (
+                <div className="item">
+                  <div className="title">WiFi</div>
+                  <div className="sub">{wifi.ssid}</div>
+                  <div className="sub">Señal: {wifi.signal}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="card">
         <h3>＋ Enviar módulo</h3>

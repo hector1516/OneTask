@@ -400,6 +400,34 @@ router.delete(
 );
 
 router.get(
+  '/api/v1/devices/:id/info',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
+    const [rows] = await pool.query('SELECT info, updated_at FROM device_system_info WHERE device_id = ?', [deviceId]);
+    const row = (rows as Array<Record<string, unknown>>)[0];
+    if (!row) { res.json({ info: null, updatedAt: null }); return; }
+    res.json({ info: row.info, updatedAt: row.updated_at });
+  }),
+);
+
+router.put(
+  '/api/v1/devices/:id/info',
+  requireDevice,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    const { info } = req.body ?? {};
+    if (!deviceId || !info) { res.status(400).json({ error: 'deviceId e info requeridos' }); return; }
+    await pool.query(
+      'INSERT INTO device_system_info (device_id, info) VALUES (?, ?) ON DUPLICATE KEY UPDATE info = VALUES(info)',
+      [deviceId, JSON.stringify(info)],
+    );
+    res.json({ ok: true });
+  }),
+);
+
+router.get(
   '/api/v1/devices/:id/status',
   requireAuth,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
