@@ -472,6 +472,7 @@ function DeviceDetail() {
             const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
             const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
             const loc = (typeof output.location === 'object' && output.location !== null ? output.location : null) as { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } | null;
+            const screenshotB64 = output.format === 'png' && typeof output.base64 === 'string' ? output.base64 : null;
             return (
               <details className="result" key={`${r.createdAt}-${i}`}>
                 <summary>
@@ -481,6 +482,15 @@ function DeviceDetail() {
                   </span>
                 </summary>
                 <div style={{ marginTop: 6 }}>
+                  {screenshotB64 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <img
+                        src={`data:image/png;base64,${screenshotB64}`}
+                        alt="Screenshot"
+                        style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid var(--line)' }}
+                      />
+                    </div>
+                  )}
                   {loc && loc.lat && loc.lon && (
                     <div style={{ marginBottom: 8 }}>
                       <span className="sub">📍 {loc.city}, {loc.region}, {loc.country} — IP: {loc.ip}</span>
