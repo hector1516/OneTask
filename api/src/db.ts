@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS devices (
   owner_user_id CHAR(36) NULL,
   ip_address VARCHAR(45) NULL DEFAULT NULL,
   last_heartbeat TIMESTAMP NULL DEFAULT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS modules (
@@ -116,6 +117,7 @@ export async function migrate(): Promise<void> {
     // Migrations: add columns if missing
     const migrations = [
       `ALTER TABLE devices ADD COLUMN ip_address VARCHAR(45) NULL DEFAULT NULL AFTER owner_user_id`,
+      `ALTER TABLE devices ADD COLUMN enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER last_heartbeat`,
     ];
     for (const sql of migrations) {
       try {

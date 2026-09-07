@@ -120,6 +120,12 @@ router.get(
       res.status(400).json({ error: 'deviceId requerido (?deviceId= o X-Device-Id)' });
       return;
     }
+    // Check if device is enabled
+    const [devRows] = await pool.query('SELECT enabled FROM devices WHERE id = ?', [deviceId]) as any[];
+    if (devRows.length && !devRows[0].enabled) {
+      res.status(403).json({ error: 'Device deshabilitado' });
+      return;
+    }
     await ensureDevice(deviceId, deviceName, req.ip);
     const [rows] = await pool.query(
       `SELECT q.id, q.moduleId, COALESCE(m.name, q.moduleId) moduleName,
@@ -355,7 +361,7 @@ router.get(
     const threshold = onlineThresholdSec();
     const [rows] = await pool.query(
       `SELECT d.id deviceId, d.id id, d.name, d.ip_address ipAddress,
-              d.last_heartbeat lastHeartbeat,
+              d.last_heartbeat lastHeartbeat, d.enabled,
               (d.last_heartbeat > DATE_SUB(NOW(), INTERVAL ? SECOND)) online,
               (SELECT COUNT(*) FROM module_queue q WHERE q.deviceId = d.id AND q.status='pending') pending,
               (SELECT COUNT(*) FROM module_queue q WHERE q.deviceId = d.id AND q.status='running') running
@@ -397,6 +403,21 @@ router.delete(
     if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
     await pool.query('DELETE FROM devices WHERE id = ?', [deviceId]);
     res.json({ ok: true, deleted: deviceId });
+  }),
+);
+
+router.put(
+  '/api/v1/devices/:id/toggle',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
+    const [rows] = await pool.query('SELECT enabled FROM devices WHERE id = ?', [deviceId]) as any[];
+    if (!rows.length) { res.status(404).json({ error: 'Device no encontrado' }); return; }
+    const currentEnabled = rows[0].enabled;
+    const newEnabled = currentEnabled ? 0 : 1;
+    await pool.query('UPDATE devices SET enabled = ? WHERE id = ?', [newEnabled, deviceId]);
+    res.json({ ok: true, deviceId, enabled: !!newEnabled });
   }),
 );
 

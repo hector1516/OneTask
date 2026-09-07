@@ -65,6 +65,7 @@ interface Device {
   ipAddress: string | null;
   pending: number;
   running: number;
+  enabled: number | boolean;
 }
 
 function Devices() {
@@ -87,6 +88,11 @@ function Devices() {
   const removeDevice = async (deviceId: string) => {
     if (!confirm(`¿Eliminar "${deviceId}"?`)) return;
     const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
+    if (r.ok) reload();
+  };
+
+  const toggleDevice = async (deviceId: string) => {
+    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(deviceId)}/toggle`, { method: 'PUT' });
     if (r.ok) reload();
   };
 
@@ -122,6 +128,8 @@ function Devices() {
                 {d.name}
                 <button className="ghost" style={{ marginLeft: 8, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto' }}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingId(editingId === d.deviceId ? null : d.deviceId); setNewNames({ ...newNames, [d.deviceId]: d.name }); }}>✎</button>
+                <button className="ghost" style={{ marginLeft: 4, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto', color: d.enabled ? '#c44' : '#4a4' }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleDevice(d.deviceId); }}>{d.enabled ? '⊘' : '✓'}</button>
                 <button className="ghost" style={{ marginLeft: 4, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto', color: '#c44' }}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeDevice(d.deviceId); }}>✕</button>
               </div>
@@ -134,6 +142,7 @@ function Devices() {
               <div className="sub">{d.deviceId}</div>
               {d.ipAddress && <div className="sub" style={{ color: 'var(--accent)' }}>IP: {d.ipAddress}</div>}
               <div className="meta">
+                {!d.enabled && <span className="badge" style={{ background: '#c44', color: '#fff' }}>Deshabilitado</span>}
                 <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? '● Online' : '○ Offline'}</span>
                 <span className="muted">⏳ {d.pending} en buffer · ▶ {d.running} en curso</span>
               </div>
