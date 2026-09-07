@@ -1,0 +1,11 @@
+{
+  "name": "Leer Hosts",
+  "description": "Lee el contenido actual del archivo hosts de Windows.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.read"],
+  "configSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}
