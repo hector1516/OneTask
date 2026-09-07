@@ -602,3 +602,76 @@ router.get(
 router.get('/api/v1/_storage', requireAuth, (_req, res) => {
   res.json({ storageRoot: STORAGE_ROOT });
 });
+
+// ---------- Device events (notifications history) ----------
+router.get(
+  '/api/v1/devices/:id/events',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    const limit = Math.min(Number(req.query.limit ?? '50'), 200);
+    if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
+    const [rows] = await pool.query(
+      'SELECT event_type, detail, old_value, new_value, created_at FROM device_events WHERE device_id = ? ORDER BY created_at DESC LIMIT ?',
+      [deviceId, limit],
+    );
+    res.json({ events: rows });
+  }),
+);
+
+// Recent events across all devices (for notifications panel)
+router.get(
+  '/api/v1/events/recent',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const limit = Math.min(Number(req.query.limit ?? '50'), 200);
+    const [rows] = await pool.query(
+      `SELECT e.device_id deviceId, d.name deviceName, e.event_type, e.detail, e.old_value, e.new_value, e.created_at
+       FROM device_events e JOIN devices d ON d.id = e.device_id
+       ORDER BY e.created_at DESC LIMIT ?`,
+      [limit],
+    );
+    res.json({ events: rows });
+  }),
+);
+
+// ---------- Advanced search ----------
+router.get(
+  '/api/v1/search',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    const type = typeof req.query.type === 'string' ? req.query.type : 'all';
+    const limit = Math.min(Number(req.query.limit ?? '50'), 200);
+    if (!q) { res.status(400).json({ error: 'query requerido (?q=...)' }); return; }
+    const results: Record<string, unknown>[] = [];
+    // Search in module results
+    if (type === 'all' || type === 'results') {
+      const [rows] = await pool.query(
+        `SELECT device_id deviceId, module_id moduleId, module_name moduleName, exec_status status, created_at createdAt, raw
+         FROM module_results WHERE JSON_SEARCH(raw, 'one', ?) IS NOT NULL ORDER BY created_at DESC LIMIT ?`,
+        [`%${q}%`, limit],
+      );
+      for (const r of rows as Array<Record<string, unknown>>) results.push({ ...r, _type: 'result' });
+    }
+    // Search in device system info
+    if (type === 'all' || type === 'system-info') {
+      const [rows] = await pool.query(
+        `SELECT device_id deviceId, info, updated_at updatedAt
+         FROM device_system_info WHERE JSON_SEARCH(info, 'one', ?) IS NOT NULL LIMIT ?`,
+        [`%${q}%`, limit],
+      );
+      for (const r of rows as Array<Record<string, unknown>>) results.push({ ...r, _type: 'system-info' });
+    }
+    // Search in VMs
+    if (type === 'all' || type === 'vms') {
+      const [rows] = await pool.query(
+        `SELECT device_id deviceId, vm_type, vm_path, vm_size_mb, vm_modified
+         FROM device_vms WHERE vm_path LIKE ? OR vm_type LIKE ? LIMIT ?`,
+        [`%${q}%`, `%${q}%`, limit],
+      );
+      for (const r of rows as Array<Record<string, unknown>>) results.push({ ...r, _type: 'vm' });
+    }
+    res.json({ results, total: results.length });
+  }),
+);

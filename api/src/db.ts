@@ -103,6 +103,17 @@ CREATE TABLE IF NOT EXISTS device_vms (
   INDEX idx_vms_device (device_id),
   CONSTRAINT fk_vms_device FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS device_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  device_id VARCHAR(128) NOT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  detail TEXT NOT NULL DEFAULT '',
+  old_value VARCHAR(255) NOT NULL DEFAULT '',
+  new_value VARCHAR(255) NOT NULL DEFAULT '',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_events_device (device_id, created_at),
+  CONSTRAINT fk_events_device FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 `;
 
 export async function migrate(): Promise<void> {

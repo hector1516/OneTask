@@ -9,6 +9,18 @@ const STATUS_ES: Record<string, string> = {
   failed: '✖ FALLO',
 };
 
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function sendNotification(title: string, body: string) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '/logo-white.png' });
+  }
+}
+
 function useJson<T>(path: string | null, pollMs?: number): { data: T | null; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
   const [tick, setTick] = useState(0);
@@ -39,7 +51,7 @@ function Login() {
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setBusy(true); setErr('');
-    try { await login(u.trim(), p); nav('/devices'); }
+    try { await login(u.trim(), p); nav('/devices'); requestNotificationPermission(); }
     catch (e) { setErr((e as Error).message === 'NETWORK' ? `Sin conexión con el servidor (${apiBase || window.location.host}).` : 'Credenciales inválidas.'); }
     finally { setBusy(false); }
   };
@@ -175,7 +187,7 @@ function DeviceDetail() {
   const [busy, setBusy] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
-  const [tab, setTab] = useState<'info' | 'vms' | 'buffer' | 'history'>('info');
+  const [tab, setTab] = useState<'info' | 'vms' | 'events' | 'buffer' | 'history'>('info');
   const q = queue.data;
   const pct = q && q.total > 0 ? Math.round((q.done / q.total) * 100) : 0;
   const avail = modules.data?.modules ?? [];
@@ -307,6 +319,7 @@ function DeviceDetail() {
       <div className="tab-bar">
         <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Panel</button>
         <button className={`tab ${tab === 'vms' ? 'active' : ''}`} onClick={() => setTab('vms')}>VMs ({vms.data?.vms?.length ?? 0})</button>
+        <button className={`tab ${tab === 'events' ? 'active' : ''}`} onClick={() => setTab('events')}>Eventos</button>
         <button className={`tab ${tab === 'buffer' ? 'active' : ''}`} onClick={() => setTab('buffer')}>Buffer ({activeCount})</button>
         <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>Historial ({allResults.length})</button>
       </div>
@@ -566,6 +579,11 @@ function DeviceDetail() {
         </div>
       )}
 
+      {/* TAB: EVENTS */}
+      {tab === 'events' && (
+        <DeviceEvents deviceId={deviceId} />
+      )}
+
       {/* TAB: HISTORY */}
       {tab === 'history' && (
         <div className="card dash-card">
@@ -609,6 +627,219 @@ function DeviceDetail() {
   );
 }
 
+function EventsPanel() {
+  const { data, reload } = useJson<{ events: Array<{ deviceId: string; deviceName: string; event_type: string; detail: string; old_value: string; new_value: string; created_at: string }> }>('/api/v1/events/recent?limit=100', 15000);
+  const events = data?.events ?? [];
+
+  const eventIcon = (type: string) => {
+    switch (type) {
+      case 'online': return '🟢';
+      case 'offline': return '🔴';
+      case 'ip_changed': return '🔄';
+      default: return '📌';
+    }
+  };
+
+  const eventColor = (type: string) => {
+    switch (type) {
+      case 'online': return '#4a4';
+      case 'offline': return '#c44';
+      case 'ip_changed': return '#aa4';
+      default: return '#888';
+    }
+  };
+
+  // Send PWA notification for new offline events
+  useEffect(() => {
+    if (events.length > 0) {
+      const lastEvent = events[0];
+      if (lastEvent.event_type === 'offline') {
+        sendNotification(`${lastEvent.deviceName} se desconectó`, lastEvent.detail);
+      } else if (lastEvent.event_type === 'ip_changed') {
+        sendNotification(`${lastEvent.deviceName} cambió de IP`, `${lastEvent.old_value} → ${lastEvent.new_value}`);
+      }
+    }
+  }, [events]);
+
+  return (
+    <div className="card dash-card">
+      <div className="dash-card-header">
+        <span className="dash-icon">🔔</span>
+        <h3 style={{ margin: 0, flex: 1 }}>Eventos del Sistema</h3>
+        <button className="ghost btn-sm" onClick={reload}>↻</button>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        {events.length === 0 ? (
+          <div className="muted">Sin eventos recientes.</div>
+        ) : (
+          <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            {events.map((e, i) => (
+              <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '1.2rem' }}>{eventIcon(e.event_type)}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    <Link to={`/devices/${encodeURIComponent(e.deviceId)}`} style={{ color: 'var(--accent)' }}>{e.deviceName}</Link>
+                    <span className="badge" style={{ marginLeft: 8, background: eventColor(e.event_type), color: '#fff', fontSize: '0.7rem' }}>
+                      {e.event_type}
+                    </span>
+                  </div>
+                  <div className="sub" style={{ fontSize: '0.85rem' }}>{e.detail}</div>
+                  {e.event_type === 'ip_changed' && (
+                    <div className="sub" style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                      {e.old_value} → {e.new_value}
+                    </div>
+                  )}
+                </div>
+                <div className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                  {e.created_at}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SearchPanel() {
+  const [query, setQuery] = useState('');
+  const [searchType, setSearchType] = useState('all');
+  const [results, setResults] = useState<Array<{ _type: string; deviceId?: string; moduleId?: string; moduleName?: string; vm_type?: string; vm_path?: string; info?: unknown }>>([]);
+  const [searching, setSearching] = useState(false);
+
+  const doSearch = async () => {
+    if (!query.trim()) return;
+    setSearching(true);
+    try {
+      const r = await apiFetch(`/api/v1/search?q=${encodeURIComponent(query)}&type=${searchType}&limit=100`);
+      const data = await r.json();
+      setResults(data.results ?? []);
+    } catch { setResults([]); }
+    finally { setSearching(false); }
+  };
+
+  const typeLabel = (t: string) => {
+    switch (t) {
+      case 'result': return 'Resultado';
+      case 'system-info': return 'System Info';
+      case 'vm': return 'VM';
+      default: return t;
+    }
+  };
+
+  return (
+    <div className="card dash-card">
+      <div className="dash-card-header">
+        <span className="dash-icon">🔍</span>
+        <h3 style={{ margin: 0 }}>Búsqueda Avanzada</h3>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar en resultados, system info, VMs..."
+            style={{ flex: 1 }}
+            onKeyDown={(e) => e.key === 'Enter' && doSearch()}
+          />
+          <select value={searchType} onChange={(e) => setSearchType(e.target.value)} style={{ width: 150 }}>
+            <option value="all">Todo</option>
+            <option value="results">Resultados</option>
+            <option value="system-info">System Info</option>
+            <option value="vms">VMs</option>
+          </select>
+          <button onClick={doSearch} disabled={searching}>{searching ? 'Buscando...' : '🔍'}</button>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          {results.length === 0 && query && !searching && (
+            <div className="muted">Sin resultados para "{query}".</div>
+          )}
+          {results.map((r, i) => (
+            <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="badge" style={{ background: r._type === 'vm' ? '#4a90d9' : r._type === 'system-info' ? '#4a4' : '#888', color: '#fff', fontSize: '0.7rem' }}>
+                  {typeLabel(r._type)}
+                </span>
+                {r.deviceId && (
+                  <Link to={`/devices/${encodeURIComponent(r.deviceId)}`} style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                    {r.deviceId}
+                  </Link>
+                )}
+                {r.moduleName && <span className="sub">{r.moduleName}</span>}
+                {r.vm_type && <span className="sub">{r.vm_type}</span>}
+              </div>
+              {r.vm_path && <div className="sub" style={{ fontFamily: 'monospace', fontSize: '0.8rem', marginTop: 4 }}>{r.vm_path}</div>}
+              {r.info && <pre className="sub" style={{ fontSize: '0.75rem', marginTop: 4, whiteSpace: 'pre-wrap' }}>{JSON.stringify(r.info, null, 2).substring(0, 300)}</pre>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeviceEvents({ deviceId }: { deviceId: string }) {
+  const enc = encodeURIComponent(deviceId);
+  const { data, reload } = useJson<{ events: Array<{ event_type: string; detail: string; old_value: string; new_value: string; created_at: string }> }>(`/api/v1/devices/${enc}/events?limit=100`, 15000);
+  const events = data?.events ?? [];
+
+  const eventIcon = (type: string) => {
+    switch (type) {
+      case 'online': return '🟢';
+      case 'offline': return '🔴';
+      case 'ip_changed': return '🔄';
+      default: return '📌';
+    }
+  };
+
+  const eventColor = (type: string) => {
+    switch (type) {
+      case 'online': return '#4a4';
+      case 'offline': return '#c44';
+      case 'ip_changed': return '#aa4';
+      default: return '#888';
+    }
+  };
+
+  return (
+    <div className="card dash-card">
+      <div className="dash-card-header">
+        <span className="dash-icon">🔔</span>
+        <h3 style={{ margin: 0, flex: 1 }}>Historial de Eventos</h3>
+        <button className="ghost btn-sm" onClick={reload}>↻</button>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        {events.length === 0 ? (
+          <div className="muted">Sin eventos para este dispositivo.</div>
+        ) : (
+          <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            {events.map((e, i) => (
+              <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '1.2rem' }}>{eventIcon(e.event_type)}</span>
+                <div style={{ flex: 1 }}>
+                  <span className="badge" style={{ background: eventColor(e.event_type), color: '#fff', fontSize: '0.7rem' }}>
+                    {e.event_type}
+                  </span>
+                  <div className="sub" style={{ fontSize: '0.85rem', marginTop: 4 }}>{e.detail}</div>
+                  {e.event_type === 'ip_changed' && (
+                    <div className="sub" style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                      {e.old_value} → {e.new_value}
+                    </div>
+                  )}
+                </div>
+                <div className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                  {e.created_at}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const nav = useNavigate();
   if (!isLoggedIn()) {
@@ -625,12 +856,16 @@ export default function App() {
         <img className="nav-logo" src="/logo-white.png" alt="OneTask" />
         <span className="hq">OneTask Command</span>
         <Link to="/devices">Dispositivos</Link>
+        <Link to="/events">Eventos</Link>
+        <Link to="/search">Buscar</Link>
         <button className="ghost" onClick={() => { logout(); nav('/login'); }}>Logout</button>
       </nav>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/devices" element={<Devices />} />
         <Route path="/devices/:id" element={<DeviceDetail />} />
+        <Route path="/events" element={<EventsPanel />} />
+        <Route path="/search" element={<SearchPanel />} />
         <Route path="*" element={<Devices />} />
       </Routes>
       <div className="foot">★ ONE TASK COMMAND ★ v0.1.0</div>
