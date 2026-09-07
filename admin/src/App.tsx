@@ -9,18 +9,25 @@ const STATUS_ES: Record<string, string> = {
   failed: '✖ FALLO',
 };
 
-function useJson<T>(path: string | null): { data: T | null; reload: () => void } {
+function useJson<T>(path: string | null, pollMs?: number): { data: T | null; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!path) return;
     let alive = true;
-    apiFetch(path)
-      .then((r) => r.json())
-      .then((j) => alive && setData(j as T))
-      .catch(() => alive && setData(null));
+    const load = () => {
+      apiFetch(path)
+        .then((r) => r.json())
+        .then((j) => alive && setData(j as T))
+        .catch(() => alive && setData(null));
+    };
+    load();
+    if (pollMs && pollMs > 0) {
+      const id = setInterval(load, pollMs);
+      return () => { alive = false; clearInterval(id); };
+    }
     return () => { alive = false; };
-  }, [path, tick]);
+  }, [path, tick, pollMs]);
   return { data, reload: () => setTick((t) => t + 1) };
 }
 
@@ -61,7 +68,7 @@ interface Device {
 }
 
 function Devices() {
-  const { data, reload } = useJson<{ devices: Device[] }>('/api/v1/devices');
+  const { data, reload } = useJson<{ devices: Device[] }>('/api/v1/devices', 15000);
   const devices = data?.devices ?? [];
   const online = devices.filter((d) => d.online).length;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -147,11 +154,11 @@ function DeviceDetail() {
   const { id = '' } = useParams();
   const deviceId = decodeURIComponent(id);
   const enc = encodeURIComponent(deviceId);
-  const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number }; name: string }>(`/api/v1/devices/${enc}/status`);
-  const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(`/api/v1/devices/${enc}/queue`);
-  const results = useJson<{ results: ResultRow[] }>(`/api/v1/devices/${enc}/results`);
+  const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number }; name: string }>(`/api/v1/devices/${enc}/status`, 10000);
+  const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(`/api/v1/devices/${enc}/queue`, 10000);
+  const results = useJson<{ results: ResultRow[] }>(`/api/v1/devices/${enc}/results/recent?limit=50`, 15000);
   const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string } }> }>('/api/v1/modules');
-  const sysInfo = useJson<{ info: Record<string, unknown> | null; updatedAt: string | null }>(`/api/v1/devices/${enc}/info`);
+  const sysInfo = useJson<{ info: Record<string, unknown> | null; updatedAt: string | null }>(`/api/v1/devices/${enc}/info`, 15000);
   const [mod, setMod] = useState('system-monitor');
   const [ver, setVer] = useState('1.0.0');
   const [params, setParams] = useState('{}');

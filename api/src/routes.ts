@@ -502,6 +502,53 @@ router.get(
   }),
 );
 
+// ---------- Agent config: auto-execution intervals ----------
+router.get(
+  '/api/v1/me/config',
+  requireDevice,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = deviceIdOf(req);
+    console.log(`[agent] GET /me/config deviceId=${deviceId}`);
+    res.json({
+      autoExec: {
+        systemInfo: { enabled: true, intervalMs: 300000 },
+        getLocation: { enabled: true, intervalMs: 1800000 },
+      },
+      heartbeatIntervalMs: 30000,
+    });
+  }),
+);
+
+// ---------- Results con filtro de tiempo (para polling eficiente) ----------
+router.get(
+  '/api/v1/devices/:id/results/recent',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    const since = typeof req.query.since === 'string' ? req.query.since : null;
+    const limit = Math.min(Number(req.query.limit ?? '50'), 200);
+    if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
+    let sql = `SELECT device_id deviceId, module_id moduleId, module_name moduleName,
+               module_description moduleDescription, module_version version,
+               queue_total total, queue_pending pending, queue_running running, queue_done done,
+               exec_status status, exec_queued_at queuedAt, exec_started_at startedAt,
+               exec_finished_at finishedAt, reported_at reportedAt, created_at createdAt, raw
+          FROM module_results WHERE device_id = ?`;
+    const params: unknown[] = [deviceId];
+    if (since) {
+      const d = new Date(since);
+      if (!Number.isNaN(d.getTime())) {
+        sql += ` AND created_at > ?`;
+        params.push(d.toISOString().slice(0, 19).replace('T', ' '));
+      }
+    }
+    sql += ` ORDER BY created_at DESC LIMIT ?`;
+    params.push(limit);
+    const [rows] = await pool.query(sql, params);
+    res.json({ results: rows });
+  }),
+);
+
 // Debug seguro: dónde vive el storage (sin listar claves)
 router.get('/api/v1/_storage', requireAuth, (_req, res) => {
   res.json({ storageRoot: STORAGE_ROOT });
