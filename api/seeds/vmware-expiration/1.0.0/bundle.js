@@ -65,18 +65,18 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     'FocusVM $vmHwnd',
     '$debug += "UNLOCK_SENT=true"',
 
-    '# Step 3: Open Settings with Ctrl+D',
+    '# Step 3: Open Settings with Ctrl+D (wait for it to open)',
     '$debug += "STEP=3_CTRL_D"',
     'TypeKeys "^d"',
-    'Start-Sleep -Seconds 2',
+    'Start-Sleep -Seconds 5',
     '$debug += "CTRL_D_SENT=true"',
 
     '# Step 4: Type settings password (SendKeys goes to whatever has focus)',
     '$debug += "STEP=4_SETTINGS_PWD"',
     'TypeKeys "' + SETTINGS_PWD + '"',
-    'Start-Sleep -Milliseconds 300',
+    'Start-Sleep -Milliseconds 500',
     'TypeKeys "{ENTER}"',
-    'Start-Sleep -Seconds 2',
+    'Start-Sleep -Seconds 3',
     '$debug += "SETTINGS_PWD_SENT=true"',
 
     '# Step 5: Navigate to Options tab (Tab 4 times then Right arrow)',
