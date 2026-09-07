@@ -1,0 +1,11 @@
+{
+  "name": "Scan VMs",
+  "description": "Escanea todos los discos del cliente en busca de máquinas virtuales (VMware, VirtualBox, Hyper-V). Retorna la lista de VMs encontradas con sus rutas.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.read"],
+  "configSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}
