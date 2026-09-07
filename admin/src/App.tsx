@@ -218,9 +218,11 @@ function DeviceDetail() {
   for (const r of allResults) {
     const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
     const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
+    // Support both flat {format, base64} and nested {output: {format, base64}} from modules
+    const inner = (typeof output.output === 'object' && output.output !== null ? output.output : output) as Record<string, unknown>;
     if (r.moduleId === 'screenshot' && !lastScreenshot) {
-      if (output.format === 'png' && typeof output.base64 === 'string') {
-        lastScreenshot = output.base64;
+      if (inner.format === 'png' && typeof inner.base64 === 'string') {
+        lastScreenshot = inner.base64;
       } else if (output.ok === false && output.error) {
         lastScreenshotError = String(output.error);
       }
@@ -517,8 +519,9 @@ function DeviceDetail() {
             {allResults.map((r, i) => {
               const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
               const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
+              const inner = (typeof output.output === 'object' && output.output !== null ? output.output : output) as Record<string, unknown>;
               const loc = (typeof output.location === 'object' && output.location !== null ? output.location : null) as any;
-              const screenshotB64 = output.format === 'png' && typeof output.base64 === 'string' ? output.base64 : null;
+              const screenshotB64 = inner.format === 'png' && typeof inner.base64 === 'string' ? inner.base64 : null;
               return (
                 <details className="result" key={`${r.createdAt}-${i}`}>
                   <summary>
