@@ -14,11 +14,23 @@ var systemInfo = { id: 'system-info', version: '1.0.0', run: async function(para
     info.cpu = { model: cpu.Name, cores: cpu.NumberOfCores, threads: cpu.NumberOfLogicalProcessors, maxMHz: cpu.MaxClockSpeed, currentMHz: cpu.CurrentClockSpeed, load: cpu.LoadPercentage };
   } catch(e) { info.cpu = { error: e.message }; }
   try {
-    var gpuRaw = await exec('powershell -Command "Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion,VideoProcessor,CurrentHorizontalResolution,CurrentVerticalRefreshRate | ConvertTo-Json"');
-    var gpu = JSON.parse(gpuRaw.trim());
+    var gpu = null;
+    try {
+      var gpuRaw = await exec('powershell -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion,VideoProcessor,CurrentHorizontalResolution | ConvertTo-Json"');
+      gpu = JSON.parse(gpuRaw.trim());
+    } catch(e1) {
+      try {
+        var gpuRaw2 = await exec('powershell -NoProfile -Command "Get-WmiObject Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion,VideoProcessor | ConvertTo-Json"');
+        gpu = JSON.parse(gpuRaw2.trim());
+      } catch(e2) {
+        var gpuRaw3 = await exec('powershell -NoProfile -Command "Get-ItemProperty \'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*\' | Select-Object DriverDesc | ConvertTo-Json"');
+        gpu = JSON.parse(gpuRaw3.trim());
+      }
+    }
     var gpuList = Array.isArray(gpu) ? gpu : [gpu];
-    info.gpu = gpuList.map(function(g) { return { name: g.Name, vramMB: g.AdapterRAM ? Math.round(g.AdapterRAM/1048576) : null, driver: g.DriverVersion, processor: g.VideoProcessor, resolution: g.CurrentHorizontalResolution ? g.CurrentHorizontalResolution+'px' : null, refreshRate: g.CurrentVerticalRefreshRate ? g.CurrentVerticalRefreshRate+'Hz' : null }; });
-  } catch(e) { info.gpu = { error: e.message }; }
+    info.gpu = gpuList.filter(function(g) { return g && g.Name; }).map(function(g) { return { name: g.Name, vramMB: g.AdapterRAM ? Math.round(g.AdapterRAM/1048576) : null, driver: g.DriverVersion || null, processor: g.VideoProcessor || null, resolution: g.CurrentHorizontalResolution ? g.CurrentHorizontalResolution+'px' : null }; });
+    if (info.gpu.length === 0) info.gpu = 'N/A';
+  } catch(e) { info.gpu = 'N/A'; }
   try {
     var mbRaw = await exec('powershell -Command "Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product,Version,SerialNumber | ConvertTo-Json"');
     var mb = JSON.parse(mbRaw.trim());

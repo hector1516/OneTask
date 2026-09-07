@@ -357,8 +357,8 @@ function DeviceDetail() {
               </div>
               <div className="sys-cell">
                 <div className="sys-label">RAM</div>
-                <div className="sys-value">{memTotalGB ? `${Math.round(memTotalGB * 1024)} MB` : '—'}</div>
-                <div className="sys-sub">{memUsedGB != null ? `Usada: ${Math.round(memUsedGB * 1024)} MB (${memPercent}%)` : '—'}</div>
+                <div className="sys-value">{memTotalGB ? `${memTotalGB.toFixed(1)} GB` : '—'}</div>
+                <div className="sys-sub">{memUsedGB != null ? `Usada: ${memUsedGB.toFixed(1)} GB (${memPercent}%)` : '—'}</div>
                 {memPercent != null && (
                   <div className="sys-bar"><div className="sys-bar-fill" style={{ width: `${memPercent}%` }} /></div>
                 )}
@@ -411,12 +411,19 @@ function DeviceDetail() {
               <span className="dash-icon">🎮</span>
               <h3 style={{ margin: 0 }}>Gráfica</h3>
             </div>
-            {gpuRaw && gpuRaw !== 'N/A (requiere WMI)' && gpuRaw !== 'N/A' ? (
+            {Array.isArray(gpuRaw) && gpuRaw.length > 0 ? (
               <div className="sys-grid">
-                <div className="sys-cell">
-                  <div className="sys-value">{gpuRaw}</div>
-                </div>
+                {gpuRaw.map((g: any, i: number) => (
+                  <div className="sys-cell" key={i}>
+                    <div className="sys-value">{g.name ?? '—'}</div>
+                    {g.vramMB && <div className="sys-sub">VRAM: {g.vramMB} MB</div>}
+                    {g.driver && <div className="sys-sub">Driver: {g.driver}</div>}
+                    {g.resolution && <div className="sys-sub">{g.resolution}</div>}
+                  </div>
+                ))}
               </div>
+            ) : typeof gpuRaw === 'string' && gpuRaw !== 'N/A' ? (
+              <div className="sys-grid"><div className="sys-cell"><div className="sys-value">{gpuRaw}</div></div></div>
             ) : <div className="dash-empty">Sin datos de gráfica</div>}
           </div>
 
