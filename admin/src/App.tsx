@@ -19,10 +19,7 @@ function useJson<T>(path: string | null): { data: T | null; reload: () => void }
       .then((r) => r.json())
       .then((j) => alive && setData(j as T))
       .catch(() => alive && setData(null));
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { alive = false; };
   }, [path, tick]);
   return { data, reload: () => setTick((t) => t + 1) };
 }
@@ -34,57 +31,31 @@ function Login() {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const submit = async () => {
-    setBusy(true);
-    setErr('');
-    try {
-      await login(u.trim(), p);
-      nav('/devices');
-    } catch (e) {
-      setErr(
-        (e as Error).message === 'NETWORK'
-          ? `Sin conexión con el servidor (${apiBase || window.location.host}). Revisa WiFi/red.`
-          : 'Credenciales inválidas.',
-      );
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setErr('');
+    try { await login(u.trim(), p); nav('/devices'); }
+    catch (e) { setErr((e as Error).message === 'NETWORK' ? `Sin conexión con el servidor (${apiBase || window.location.host}).` : 'Credenciales inválidas.'); }
+    finally { setBusy(false); }
   };
   return (
     <div className="card">
       <img className="hero-logo" src="/logo-white.png" alt="OneTask Command" />
-      <h2 style={{ textAlign: 'center' }}>
-        <span className="star">★</span> OneTask Command <span className="star">★</span>
-      </h2>
+      <h2 style={{ textAlign: 'center' }}><span className="star">★</span> OneTask Command <span className="star">★</span></h2>
       <div className="stack">
         <input value={u} onChange={(e) => setU(e.target.value)} placeholder="Usuario" autoComplete="username" autoCapitalize="off" />
-        <input
-          value={p}
-          onChange={(e) => setP(e.target.value)}
-          placeholder="Contraseña"
-          type="password"
-          autoComplete="current-password"
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
-        />
-        <button className="btn-block" onClick={submit} disabled={busy}>
-          {busy ? 'Conectando…' : '★ Entrar ★'}
-        </button>
+        <input value={p} onChange={(e) => setP(e.target.value)} placeholder="Contraseña" type="password" autoComplete="current-password" onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        <button className="btn-block" onClick={submit} disabled={busy}>{busy ? 'Conectando…' : '★ Entrar ★'}</button>
       </div>
-      {err && (
-        <p className="error-box" style={{ marginBottom: 0 }}>
-          {err}
-        </p>
-      )}
+      {err && <p className="error-box" style={{ marginBottom: 0 }}>{err}</p>}
     </div>
   );
 }
 
 interface Device {
   deviceId: string;
-  id: string;
   name: string;
-  ipAddress: string | null;
   online: boolean;
   lastHeartbeat: string | null;
+  ipAddress: string | null;
   pending: number;
   running: number;
 }
@@ -102,14 +73,8 @@ function Devices() {
   const rename = async (deviceId: string) => {
     const name = newNames[deviceId]?.trim();
     if (!name) return;
-    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(deviceId)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ name }),
-    });
-    if (r.ok) {
-      setEditingId(null);
-      reload();
-    }
+    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(deviceId)}`, { method: 'PUT', body: JSON.stringify({ name }) });
+    if (r.ok) { setEditingId(null); reload(); }
   };
 
   const removeDevice = async (deviceId: string) => {
@@ -122,31 +87,17 @@ function Devices() {
     const id = newDeviceId.trim();
     const name = newDeviceName.trim() || id;
     if (!id) return;
-    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ name }),
-    });
-    if (r.ok) {
-      setAdding(false);
-      setNewDeviceId('');
-      setNewDeviceName('');
-      reload();
-    }
+    const r = await apiFetch(`/api/v1/devices/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ name }) });
+    if (r.ok) { setAdding(false); setNewDeviceId(''); setNewDeviceName(''); reload(); }
   };
 
   return (
     <div>
       <div className="card">
         <div className="row">
-          <h2 style={{ flex: 1, margin: 0 }}>
-            <span className="star">★</span> Dispositivos {online}/{devices.length} online
-          </h2>
-          <button className="ghost" onClick={() => setAdding(!adding)}>
-            {adding ? '✕' : '＋ Agregar'}
-          </button>
-          <button className="ghost" onClick={reload}>
-            ↻
-          </button>
+          <h2 style={{ flex: 1, margin: 0 }}><span className="star">★</span> Dispositivos {online}/{devices.length} online</h2>
+          <button className="ghost" onClick={() => setAdding(!adding)}>{adding ? '✕' : '＋ Agregar'}</button>
+          <button className="ghost" onClick={reload}>↻</button>
         </div>
         {adding && (
           <div className="stack" style={{ marginTop: 10 }}>
@@ -162,96 +113,41 @@ function Devices() {
             <div className="item">
               <div className="title">
                 {d.name}
-                <button
-                  className="ghost"
-                  style={{ marginLeft: 8, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto' }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setEditingId(editingId === d.deviceId ? null : d.deviceId);
-                    setNewNames({ ...newNames, [d.deviceId]: d.name });
-                  }}
-                >
-                  ✎
-                </button>
-                <button
-                  className="ghost"
-                  style={{ marginLeft: 4, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto', color: '#c44' }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    removeDevice(d.deviceId);
-                  }}
-                >
-                  ✕
-                </button>
+                <button className="ghost" style={{ marginLeft: 8, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto' }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingId(editingId === d.deviceId ? null : d.deviceId); setNewNames({ ...newNames, [d.deviceId]: d.name }); }}>✎</button>
+                <button className="ghost" style={{ marginLeft: 4, padding: '2px 8px', fontSize: '0.7rem', minHeight: 'auto', color: '#c44' }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeDevice(d.deviceId); }}>✕</button>
               </div>
               {editingId === d.deviceId && (
                 <div className="row" style={{ marginTop: 6 }} onClick={(e) => e.preventDefault()}>
-                  <input
-                    value={newNames[d.deviceId] ?? d.name}
-                    onChange={(e) => setNewNames({ ...newNames, [d.deviceId]: e.target.value })}
-                    placeholder="Nombre"
-                    style={{ width: 200 }}
-                  />
-                  <button
-                    style={{ padding: '4px 10px', minHeight: 'auto' }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      rename(d.deviceId);
-                    }}
-                  >
-                    ✓
-                  </button>
+                  <input value={newNames[d.deviceId] ?? d.name} onChange={(e) => setNewNames({ ...newNames, [d.deviceId]: e.target.value })} placeholder="Nombre" style={{ width: 200 }} />
+                  <button style={{ padding: '4px 10px', minHeight: 'auto' }} onClick={(e) => { e.preventDefault(); rename(d.deviceId); }}>✓</button>
                 </div>
               )}
               <div className="sub">{d.deviceId}</div>
               {d.ipAddress && <div className="sub" style={{ color: 'var(--accent)' }}>IP: {d.ipAddress}</div>}
               <div className="meta">
                 <span className={`badge ${d.online ? 'online' : 'offline'}`}>{d.online ? '● Online' : '○ Offline'}</span>
-                <span className="muted">
-                  ⏳ {d.pending} en buffer · ▶ {d.running} en curso
-                </span>
+                <span className="muted">⏳ {d.pending} en buffer · ▶ {d.running} en curso</span>
               </div>
               <div className="sub">Último contacto: {d.lastHeartbeat ?? 'sin contacto'}</div>
             </div>
           </Link>
         ))}
-        {devices.length === 0 && <div className="card muted">Sin dispositivos. El Agent se presenta tras su primer pull.</div>}
+        {devices.length === 0 && <div className="card muted">Sin dispositivos.</div>}
       </div>
     </div>
   );
 }
 
-interface QueueItem {
-  id: number;
-  moduleId: string;
-  moduleName: string;
-  moduleDescription: string;
-  version: string;
-  status: string;
-  queuedAt: string;
-  startedAt: string | null;
-  finishedAt: string | null;
-}
-
-interface ResultRow {
-  moduleId: string;
-  moduleName: string;
-  version: string;
-  status: string;
-  reportedAt: string | null;
-  createdAt: string;
-  raw: unknown;
-}
+interface QueueItem { id: number; moduleId: string; moduleName: string; moduleDescription: string; version: string; status: string; queuedAt: string; }
+interface ResultRow { moduleId: string; moduleName: string; version: string; status: string; reportedAt: string | null; createdAt: string; raw: unknown; }
 
 function DeviceDetail() {
   const { id = '' } = useParams();
   const deviceId = decodeURIComponent(id);
   const enc = encodeURIComponent(deviceId);
-  const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number }; name: string }>(
-    `/api/v1/devices/${enc}/status`,
-  );
+  const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number }; name: string }>(`/api/v1/devices/${enc}/status`);
   const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(`/api/v1/devices/${enc}/queue`);
   const results = useJson<{ results: ResultRow[] }>(`/api/v1/devices/${enc}/results`);
   const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string } }> }>('/api/v1/modules');
@@ -262,100 +158,91 @@ function DeviceDetail() {
   const [busy, setBusy] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
+  const [tab, setTab] = useState<'info' | 'buffer' | 'history'>('info');
   const q = queue.data;
   const pct = q && q.total > 0 ? Math.round((q.done / q.total) * 100) : 0;
-  const avail = modules.data?.modules ?? [{ manifest: { id: 'system-monitor', name: 'System Monitor', version: '1.0.0' } }];
+  const avail = modules.data?.modules ?? [];
 
   const rename = async () => {
     if (!newName.trim()) return;
-    const r = await apiFetch(`/api/v1/devices/${enc}`, {
-      method: 'PUT',
-      body: JSON.stringify({ name: newName.trim() }),
-    });
-    if (r.ok) {
-      setEditingName(false);
-      status.reload();
-    }
+    const r = await apiFetch(`/api/v1/devices/${enc}`, { method: 'PUT', body: JSON.stringify({ name: newName.trim() }) });
+    if (r.ok) { setEditingName(false); status.reload(); }
   };
 
   const enqueue = async () => {
     let parsed: unknown = {};
-    try {
-      parsed = JSON.parse(params || '{}');
-    } catch {
-      alert('params no es JSON válido');
-      return;
-    }
+    try { parsed = JSON.parse(params || '{}'); } catch { alert('params no es JSON válido'); return; }
     setBusy(true);
-    const r = await apiFetch(`/api/v1/devices/${enc}/queue`, {
-      method: 'POST',
-      body: JSON.stringify({ moduleId: mod, version: ver, params: parsed }),
-    });
+    const r = await apiFetch(`/api/v1/devices/${enc}/queue`, { method: 'POST', body: JSON.stringify({ moduleId: mod, version: ver, params: parsed }) });
     setBusy(false);
     if (!r.ok) alert(`Error: ${await r.text()}`);
-    else {
-      queue.reload();
-      status.reload();
-    }
+    else { queue.reload(); status.reload(); }
   };
 
   const cancel = async (itemId: number) => {
     const r = await apiFetch(`/api/v1/devices/${enc}/queue/${itemId}`, { method: 'DELETE' });
-    if (r.ok) {
-      queue.reload();
-      status.reload();
-    }
+    if (r.ok) { queue.reload(); status.reload(); }
   };
 
   const cancelAll = async () => {
     if (!confirm('¿Cancelar todas las tareas del buffer?')) return;
     const r = await apiFetch(`/api/v1/devices/${enc}/queue`, { method: 'DELETE' });
-    if (r.ok) {
-      queue.reload();
-      status.reload();
-    }
+    if (r.ok) { queue.reload(); status.reload(); }
   };
 
   const clearAll = async () => {
-    if (!confirm('¿Vaciar TODO el buffer? Se borrarán done, failed y pending.')) return;
+    if (!confirm('¿Vaciar TODO el buffer?')) return;
     const r = await apiFetch(`/api/v1/devices/${enc}/queue/all`, { method: 'DELETE' });
-    if (r.ok) {
-      queue.reload();
-      status.reload();
-    }
+    if (r.ok) { queue.reload(); status.reload(); }
   };
 
   const clearResults = async () => {
-    if (!confirm('¿Borrar todos los resultados de este dispositivo?')) return;
+    if (!confirm('¿Borrar todos los resultados?')) return;
     const r = await apiFetch(`/api/v1/devices/${enc}/results`, { method: 'DELETE' });
     if (r.ok) results.reload();
   };
 
+  // Extract last screenshot & location from results
+  const allResults = results.data?.results ?? [];
+  let lastScreenshot: string | null = null;
+  let lastLocation: { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } | null = null;
+  for (const r of allResults) {
+    const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
+    const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
+    if (!lastScreenshot && output.format === 'png' && typeof output.base64 === 'string') lastScreenshot = output.base64;
+    if (!lastLocation && typeof output.location === 'object' && output.location !== null) lastLocation = output.location as any;
+    if (lastScreenshot && lastLocation) break;
+  }
+
+  // System info
+  const info = (sysInfo.data?.info ?? {}) as Record<string, any>;
+  const os = (info.os ?? {}) as Record<string, any>;
+  const cpu = (info.cpu ?? {}) as Record<string, any>;
+  const uptime = (info.uptime ?? {}) as Record<string, any>;
+  const disks = Array.isArray(info.disks) ? info.disks : [];
+  const gpuList = Array.isArray(info.gpu) ? info.gpu : [];
+  const ips = Array.isArray(info.ipAddresses) ? info.ipAddresses : [];
+  const wifi = (info.wifi ?? {}) as Record<string, any>;
+  const hostname = info.hostname as string | undefined;
+
   return (
     <div>
-      <Link to="/devices">← dispositivos</Link>
+      <Link to="/devices" style={{ fontSize: '0.9rem' }}>← Volver a dispositivos</Link>
+
+      {/* HEADER */}
       <div className="card" style={{ marginTop: 8 }}>
         <div className="row">
           <h2 style={{ flex: 1, margin: 0, wordBreak: 'break-all' }}>
             <span className="star">★</span> {status.data?.name || deviceId}
           </h2>
           {!editingName ? (
-            <button
-              className="ghost"
-              onClick={() => {
-                setNewName(status.data?.name || '');
-                setEditingName(true);
-              }}
-            >
-              ✎
-            </button>
+            <button className="ghost" style={{ padding: '6px 12px', minHeight: 'auto' }}
+              onClick={() => { setNewName(status.data?.name || ''); setEditingName(true); }}>✎ Editar</button>
           ) : (
             <div className="row">
               <input value={newName} onChange={(e) => setNewName(e.target.value)} style={{ width: 160 }} placeholder="Nombre" />
-              <button onClick={rename}>✓</button>
-              <button className="ghost" onClick={() => setEditingName(false)}>
-                ✕
-              </button>
+              <button style={{ padding: '6px 12px', minHeight: 'auto' }} onClick={rename}>✓</button>
+              <button className="ghost" style={{ padding: '6px 12px', minHeight: 'auto' }} onClick={() => setEditingName(false)}>✕</button>
             </div>
           )}
         </div>
@@ -364,286 +251,228 @@ function DeviceDetail() {
           <span className={`badge ${status.data?.online ? 'online' : 'offline'}`}>{status.data?.online ? '● Online' : '○ Offline'}</span>
           <span className="muted">Último contacto: {status.data?.lastHeartbeat ?? 'sin contacto'}</span>
         </div>
-        <p className="muted" style={{ margin: '8px 0' }}>
-          {q?.done ?? 0}/{q?.total ?? 0} completados ({pct}%) · {q?.pending ?? 0} en buffer · {q?.running ?? 0} en curso
-        </p>
-        <div className="bar">
+        <div className="bar" style={{ marginTop: 8 }}>
           <div style={{ width: `${pct}%` }} />
         </div>
+        <div className="muted" style={{ marginTop: 4 }}>{q?.done ?? 0}/{q?.total ?? 0} completados · {q?.pending ?? 0} en buffer · {q?.running ?? 0} en curso</div>
       </div>
 
-      {(() => {
-        const info = (sysInfo.data?.info ?? {}) as Record<string, any>;
-        const os = (info.os ?? {}) as Record<string, any>;
-        const cpu = (info.cpu ?? {}) as Record<string, any>;
-        const uptime = (info.uptime ?? {}) as Record<string, any>;
-        const disks = Array.isArray(info.disks) ? info.disks : [];
-        const gpuList = Array.isArray(info.gpu) ? info.gpu : [];
-        const ips = Array.isArray(info.ipAddresses) ? info.ipAddresses : [];
-        const wifi = (info.wifi ?? {}) as Record<string, any>;
-        const noData = !sysInfo.data?.info;
-        return (
-          <div className="card">
-            <h3>Información del Sistema</h3>
-            <div className="muted" style={{ marginBottom: 8 }}>{noData ? 'Esperando datos del Agent…' : 'Actualizado: ' + (sysInfo.data?.updatedAt ?? 'desconocido')}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-              <div className="item">
-                <div className="title">Sistema Operativo</div>
-                <div className="sub">{os.name ? os.name + ' ' + os.version : '—'}</div>
-                <div className="sub">{os.build ? 'Build: ' + os.build + ' | ' + os.arch : '—'}</div>
-                <div className="sub">{os.user ? 'Usuario: ' + os.user : '—'}</div>
+      {/* TABS */}
+      <div className="tab-bar">
+        <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Panel</button>
+        <button className={`tab ${tab === 'buffer' ? 'active' : ''}`} onClick={() => setTab('buffer')}>Buffer ({q?.queue?.length ?? 0})</button>
+        <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>Historial ({allResults.length})</button>
+      </div>
+
+      {/* TAB: INFO */}
+      {tab === 'info' && (
+        <>
+          {/* Screenshot */}
+          <div className="card dash-card">
+            <div className="dash-card-header">
+              <span className="dash-icon">📷</span>
+              <h3 style={{ margin: 0 }}>Screenshot</h3>
+            </div>
+            {lastScreenshot ? (
+              <img src={`data:image/png;base64,${lastScreenshot}`} alt="Screenshot" className="screenshot-img" />
+            ) : (
+              <div className="dash-empty">Sin screenshot — ejecuta el módulo <b>screenshot</b></div>
+            )}
+          </div>
+
+          {/* Location */}
+          <div className="card dash-card">
+            <div className="dash-card-header">
+              <span className="dash-icon">📍</span>
+              <h3 style={{ margin: 0 }}>Ubicación</h3>
+            </div>
+            {lastLocation && lastLocation.lat && lastLocation.lon ? (
+              <div>
+                <div className="dash-loc-info">{lastLocation.city}, {lastLocation.region}, {lastLocation.country}</div>
+                <div className="dash-loc-ip">IP pública: {lastLocation.ip}</div>
+                <div className="dash-loc-coords">Lat: {lastLocation.lat} · Lon: {lastLocation.lon}</div>
+                <a href={`https://www.google.com/maps?q=${lastLocation.lat},${lastLocation.lon}`} target="_blank" rel="noopener noreferrer" className="btn-maps">Abrir en Google Maps</a>
               </div>
-              <div className="item">
-                <div className="title">CPU</div>
-                <div className="sub">{cpu.model ?? '—'}</div>
-                <div className="sub">{cpu.cores ? cpu.cores + ' núcleos / ' + cpu.threads + ' hilos' : '—'}</div>
-                <div className="sub">{cpu.load != null ? 'Uso: ' + cpu.load + '% | ' + cpu.currentMHz + ' MHz' : '—'}</div>
+            ) : (
+              <div className="dash-empty">Sin ubicación — ejecuta el módulo <b>get-location</b></div>
+            )}
+          </div>
+
+          {/* System Info Grid */}
+          <div className="card dash-card">
+            <div className="dash-card-header">
+              <span className="dash-icon">🖥️</span>
+              <h3 style={{ margin: 0 }}>Sistema</h3>
+              {sysInfo.data?.updatedAt && <span className="muted">Actualizado: {sysInfo.data.updatedAt}</span>}
+            </div>
+            <div className="sys-grid">
+              <div className="sys-cell">
+                <div className="sys-label">Sistema Operativo</div>
+                <div className="sys-value">{os.name ? `${os.name} ${os.version}` : '—'}</div>
+                <div className="sys-sub">{os.build ? `Build ${os.build} · ${os.arch}` : '—'}</div>
               </div>
-              <div className="item">
-                <div className="title">Memoria RAM</div>
-                <div className="sub">{uptime.totalMemMB ? 'Total: ' + uptime.totalMemMB + ' MB' : '—'}</div>
-                <div className="sub">{uptime.usedMemMB ? 'Usada: ' + uptime.usedMemMB + ' MB (' + uptime.memPercent + '%)' : '—'}</div>
-                <div className="sub">{uptime.freeMemMB ? 'Libre: ' + uptime.freeMemMB + ' MB' : '—'}</div>
+              <div className="sys-cell">
+                <div className="sys-label">CPU</div>
+                <div className="sys-value">{cpu.model ?? '—'}</div>
+                <div className="sys-sub">{cpu.cores ? `${cpu.cores} núcleos / ${cpu.threads} hilos` : '—'}</div>
+                <div className="sys-sub">{cpu.load != null ? `${cpu.load}% · ${cpu.currentMHz} MHz` : ''}</div>
               </div>
-              {disks.length > 0 ? disks.map((d: any, i: number) => (
-                <div className="item" key={i}>
-                  <div className="title">Disco {d.letter}</div>
-                  <div className="sub">{d.label || 'Sin nombre'} | {d.fs}</div>
-                  <div className="sub">Total: {d.totalGB} GB</div>
-                  <div className="sub">Usado: {d.usedGB} GB | Libre: {d.freeGB} GB</div>
-                </div>
-              )) : (
-                <div className="item">
-                  <div className="title">Disco</div>
-                  <div className="sub">—</div>
-                </div>
-              )}
-              {gpuList.length > 0 ? gpuList.map((g: any, i: number) => (
-                <div className="item" key={i}>
-                  <div className="title">Gráfica</div>
-                  <div className="sub">{g.name ?? '—'}</div>
-                  {g.vramMB && <div className="sub">VRAM: {g.vramMB} MB</div>}
-                  {g.driver && <div className="sub">Driver: {g.driver}</div>}
-                </div>
-              )) : (
-                <div className="item">
-                  <div className="title">Gráfica</div>
-                  <div className="sub">—</div>
-                </div>
-              )}
-              <div className="item">
-                <div className="title">Hostname</div>
-                <div className="sub">{info.hostname ?? '—'}</div>
+              <div className="sys-cell">
+                <div className="sys-label">RAM</div>
+                <div className="sys-value">{uptime.totalMemMB ? `${uptime.totalMemMB} MB` : '—'}</div>
+                <div className="sys-sub">{uptime.usedMemMB ? `Usada: ${uptime.usedMemMB} MB (${uptime.memPercent}%)` : '—'}</div>
+                {uptime.memPercent != null && (
+                  <div className="sys-bar"><div className="sys-bar-fill" style={{ width: `${uptime.memPercent}%` }} /></div>
+                )}
               </div>
-              {ips.length > 0 ? ips.map((ip: any, i: number) => (
-                <div className="item" key={i}>
-                  <div className="title">IP ({ip.interface})</div>
-                  <div className="sub">{ip.ip}/{ip.prefix}</div>
-                </div>
-              )) : (
-                <div className="item">
-                  <div className="title">IP</div>
-                  <div className="sub">—</div>
-                </div>
-              )}
-              <div className="item">
-                <div className="title">WiFi</div>
-                <div className="sub">{wifi?.ssid ?? '—'}</div>
-                <div className="sub">{wifi?.signal ? 'Señal: ' + wifi.signal : '—'}</div>
+              <div className="sys-cell">
+                <div className="sys-label">Hostname</div>
+                <div className="sys-value">{hostname ?? '—'}</div>
+              </div>
+              <div className="sys-cell">
+                <div className="sys-label">IP Local</div>
+                <div className="sys-value">{ips.length > 0 ? ips.map((ip: any) => ip.ip).join(', ') : '—'}</div>
+              </div>
+              <div className="sys-cell">
+                <div className="sys-label">WiFi</div>
+                <div className="sys-value">{wifi?.ssid ?? '—'}</div>
+                <div className="sys-sub">{wifi?.signal ? `Señal: ${wifi.signal}` : ''}</div>
               </div>
             </div>
           </div>
-        );
-      })()}
 
-      {(() => {
-        const allResults = results.data?.results ?? [];
-        let lastScreenshot: string | null = null;
-        let lastLocation: { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } | null = null;
-        for (const r of allResults) {
-          const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
-          const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
-          if (!lastScreenshot && output.format === 'png' && typeof output.base64 === 'string') lastScreenshot = output.base64;
-          if (!lastLocation && typeof output.location === 'object' && output.location !== null) lastLocation = output.location as any;
-          if (lastScreenshot && lastLocation) break;
-        }
-        return (
-          <>
-            <div className="card">
-              <h3>Último Screenshot</h3>
-              {lastScreenshot ? (
-                <img
-                  src={`data:image/png;base64,${lastScreenshot}`}
-                  alt="Screenshot"
-                  style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid var(--line)' }}
-                />
-              ) : (
-                <div className="muted" style={{ padding: 20, textAlign: 'center' }}>Sin screenshot — ejecuta el módulo screenshot</div>
-              )}
+          {/* Disks */}
+          <div className="card dash-card">
+            <div className="dash-card-header">
+              <span className="dash-icon">💾</span>
+              <h3 style={{ margin: 0 }}>Discos</h3>
             </div>
-            <div className="card">
-              <h3>Última Ubicación</h3>
-              {lastLocation && lastLocation.lat && lastLocation.lon ? (
-                <>
-                  <div className="sub">📍 {lastLocation.city}, {lastLocation.region}, {lastLocation.country} — IP: {lastLocation.ip}</div>
-                  <a
-                    href={`https://www.google.com/maps?q=${lastLocation.lat},${lastLocation.lon}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: 'inline-block', marginTop: 8, padding: '6px 14px', background: 'var(--accent)', color: '#000', borderRadius: 4, fontSize: '0.85rem', textDecoration: 'none' }}
-                  >
-                    Abrir en Google Maps
-                  </a>
-                </>
-              ) : (
-                <div className="muted" style={{ padding: 20, textAlign: 'center' }}>Sin ubicación — ejecuta el módulo get-location</div>
-              )}
+            {disks.length > 0 ? (
+              <div className="sys-grid">
+                {disks.map((d: any, i: number) => (
+                  <div className="sys-cell" key={i}>
+                    <div className="sys-label">Disco {d.letter}</div>
+                    <div className="sys-value">{d.label || 'Sin nombre'} · {d.fs}</div>
+                    <div className="sys-sub">Total: {d.totalGB} GB · Libre: {d.freeGB} GB</div>
+                    {d.totalGB && d.freeGB != null && (
+                      <div className="sys-bar"><div className="sys-bar-fill disk-bar" style={{ width: `${Math.round(((d.totalGB - d.freeGB) / d.totalGB) * 100)}%` }} /></div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : <div className="dash-empty">Sin datos de discos</div>}
+          </div>
+
+          {/* GPU */}
+          <div className="card dash-card">
+            <div className="dash-card-header">
+              <span className="dash-icon">🎮</span>
+              <h3 style={{ margin: 0 }}>Gráfica</h3>
             </div>
-          </>
-        );
-      })()}
+            {gpuList.length > 0 ? (
+              <div className="sys-grid">
+                {gpuList.map((g: any, i: number) => (
+                  <div className="sys-cell" key={i}>
+                    <div className="sys-value">{g.name ?? '—'}</div>
+                    {g.vramMB && <div className="sys-sub">VRAM: {g.vramMB} MB</div>}
+                    {g.driver && <div className="sys-sub">Driver: {g.driver}</div>}
+                  </div>
+                ))}
+              </div>
+            ) : <div className="dash-empty">Sin datos de gráfica</div>}
+          </div>
 
-      <div className="card">
-        <h3>＋ Enviar módulo</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Llega al Agent en su próximo pull, aunque esté offline.
-        </p>
-        <div className="stack">
-          <select value={mod} onChange={(e) => setMod(e.target.value)}>
-            {avail.map((m) => (
-              <option key={m.manifest.id} value={m.manifest.id}>
-                {m.manifest.name} ({m.manifest.id})
-              </option>
-            ))}
-          </select>
-          <input value={ver} onChange={(e) => setVer(e.target.value)} placeholder="Versión (p. ej. 1.0.0)" />
-          <input value={params} onChange={(e) => setParams(e.target.value)} placeholder='Params JSON (p. ej. {"intervalSec":60})' />
-          <button className="btn-block" onClick={enqueue} disabled={busy}>
-            {busy ? 'Enviando…' : '▶ Enviar al agente'}
-          </button>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="row">
-          <h3 style={{ flex: 1, margin: 0 }}>Buffer ({q?.queue?.length ?? 0})</h3>
-          {(q?.queue?.length ?? 0) > 0 && (
-            <>
-              <button
-                className="ghost"
-                style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
-                onClick={cancelAll}
-              >
-                ✕ Cancelar activas
-              </button>
-              <button
-                className="ghost"
-                style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
-                onClick={clearAll}
-              >
-                ✕ Vaciar todo
-              </button>
-            </>
-          )}
-        </div>
-        <div className="list">
-          {(q?.queue ?? []).map((it) => (
-            <div className="item" key={it.id}>
-              <div className="title">
-                {it.moduleName} <span className="muted">#{it.id}</span>
-              </div>
-              <div className="sub">
-                {it.moduleId}@{it.version}
-              </div>
-              {it.moduleDescription ? <div className="sub">{it.moduleDescription}</div> : null}
-              <div className="meta">
-                <span className={`badge ${it.status}`}>{STATUS_ES[it.status] ?? it.status}</span>
-                <span className="muted">{it.queuedAt}</span>
-                {(it.status === 'pending' || it.status === 'running') && (
-                  <button
-                    className="ghost"
-                    style={{ marginLeft: 'auto', padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      cancel(it.id);
-                    }}
-                  >
-                    ✕ Cancelar
-                  </button>
-                )}
-              </div>
+          {/* Enviar módulo */}
+          <div className="card dash-card">
+            <div className="dash-card-header">
+              <span className="dash-icon">🚀</span>
+              <h3 style={{ margin: 0 }}>Enviar Módulo</h3>
             </div>
-          ))}
-          {(q?.queue?.length ?? 0) === 0 && <div className="muted">Buffer vacío. Todo completado.</div>}
-        </div>
-      </div>
+            <div className="stack">
+              <select value={mod} onChange={(e) => setMod(e.target.value)}>
+                {avail.map((m) => (
+                  <option key={m.manifest.id} value={m.manifest.id}>{m.manifest.name} ({m.manifest.id})</option>
+                ))}
+              </select>
+              <input value={ver} onChange={(e) => setVer(e.target.value)} placeholder="Versión (p. ej. 1.0.0)" />
+              <input value={params} onChange={(e) => setParams(e.target.value)} placeholder='Params JSON (ej: {"intervalSec":60})' />
+              <button className="btn-block" onClick={enqueue} disabled={busy}>{busy ? 'Enviando…' : '▶ Enviar al agente'}</button>
+            </div>
+          </div>
+        </>
+      )}
 
-      <div className="card">
-        <div className="row">
-          <h3 style={{ flex: 1, margin: 0 }}>Módulos completados ({results.data?.results?.length ?? 0})</h3>
-          <button
-            className="ghost"
-            onClick={clearResults}
-            style={{ padding: '4px 10px', minHeight: 'auto', fontSize: '0.75rem' }}
-          >
-            ✕ Borrar todos
-          </button>
-          <button
-            className="ghost"
-            onClick={() => {
-              results.reload();
-              queue.reload();
-              status.reload();
-            }}
-          >
-            ↻
-          </button>
-        </div>
-        <div style={{ marginTop: 10 }}>
-          {(results.data?.results ?? []).map((r, i) => {
-            const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
-            const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
-            const loc = (typeof output.location === 'object' && output.location !== null ? output.location : null) as { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } | null;
-            const screenshotB64 = output.format === 'png' && typeof output.base64 === 'string' ? output.base64 : null;
-            return (
-              <details className="result" key={`${r.createdAt}-${i}`}>
-                <summary>
-                  <span className={`badge ${r.status}`}>{STATUS_ES[r.status] ?? r.status ?? '—'}</span>
-                  <span>
-                    {r.moduleName || r.moduleId}@{r.version}
-                  </span>
-                </summary>
-                <div style={{ marginTop: 6 }}>
-                  {screenshotB64 && (
-                    <div style={{ marginBottom: 8 }}>
-                      <img
-                        src={`data:image/png;base64,${screenshotB64}`}
-                        alt="Screenshot"
-                        style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid var(--line)' }}
-                      />
-                    </div>
+      {/* TAB: BUFFER */}
+      {tab === 'buffer' && (
+        <div className="card dash-card">
+          <div className="dash-card-header">
+            <span className="dash-icon">📋</span>
+            <h3 style={{ margin: 0, flex: 1 }}>Buffer</h3>
+            {(q?.queue?.length ?? 0) > 0 && (
+              <>
+                <button className="ghost btn-sm" onClick={cancelAll}>✕ Cancelar activas</button>
+                <button className="ghost btn-sm" onClick={clearAll}>✕ Vaciar todo</button>
+              </>
+            )}
+          </div>
+          <div className="list">
+            {(q?.queue ?? []).map((it) => (
+              <div className="item" key={it.id}>
+                <div className="title">{it.moduleName} <span className="muted">#{it.id}</span></div>
+                <div className="sub">{it.moduleId}@{it.version}</div>
+                {it.moduleDescription ? <div className="sub">{it.moduleDescription}</div> : null}
+                <div className="meta">
+                  <span className={`badge ${it.status}`}>{STATUS_ES[it.status] ?? it.status}</span>
+                  <span className="muted">{it.queuedAt}</span>
+                  {(it.status === 'pending' || it.status === 'running') && (
+                    <button className="ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => cancel(it.id)}>✕ Cancelar</button>
                   )}
-                  {loc && loc.lat && loc.lon && (
-                    <div style={{ marginBottom: 8 }}>
-                      <span className="sub">📍 {loc.city}, {loc.region}, {loc.country} — IP: {loc.ip}</span>
-                      <a
-                        href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: 'inline-block', marginLeft: 8, padding: '3px 10px', background: 'var(--accent)', color: '#000', borderRadius: 4, fontSize: '0.8rem', textDecoration: 'none' }}
-                      >
-                        Abrir en Google Maps
-                      </a>
-                    </div>
-                  )}
-                  <pre>{JSON.stringify(raw, null, 2)}</pre>
                 </div>
-              </details>
-            );
-          })}
-          {(results.data?.results?.length ?? 0) === 0 && <div className="muted">Sin resultados aún.</div>}
+              </div>
+            ))}
+            {(q?.queue?.length ?? 0) === 0 && <div className="dash-empty">Buffer vacío</div>}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* TAB: HISTORY */}
+      {tab === 'history' && (
+        <div className="card dash-card">
+          <div className="dash-card-header">
+            <span className="dash-icon">📜</span>
+            <h3 style={{ margin: 0, flex: 1 }}>Historial</h3>
+            <button className="ghost btn-sm" onClick={clearResults}>✕ Borrar todos</button>
+            <button className="ghost btn-sm" onClick={() => { results.reload(); queue.reload(); status.reload(); }}>↻</button>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            {allResults.map((r, i) => {
+              const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
+              const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
+              const loc = (typeof output.location === 'object' && output.location !== null ? output.location : null) as any;
+              const screenshotB64 = output.format === 'png' && typeof output.base64 === 'string' ? output.base64 : null;
+              return (
+                <details className="result" key={`${r.createdAt}-${i}`}>
+                  <summary>
+                    <span className={`badge ${r.status}`}>{STATUS_ES[r.status] ?? r.status ?? '—'}</span>
+                    <span>{r.moduleName || r.moduleId}@{r.version}</span>
+                  </summary>
+                  <div style={{ marginTop: 6 }}>
+                    {screenshotB64 && <img src={`data:image/png;base64,${screenshotB64}`} alt="Screenshot" className="screenshot-img" />}
+                    {loc && loc.lat && loc.lon && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span className="sub">📍 {loc.city}, {loc.region}, {loc.country} — IP: {loc.ip}</span>
+                        <a href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`} target="_blank" rel="noopener noreferrer" className="btn-maps" style={{ marginLeft: 8 }}>Maps</a>
+                      </div>
+                    )}
+                    <pre>{JSON.stringify(raw, null, 2)}</pre>
+                  </div>
+                </details>
+              );
+            })}
+            {allResults.length === 0 && <div className="dash-empty">Sin resultados aún</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -664,15 +493,7 @@ export default function App() {
         <img className="nav-logo" src="/logo-white.png" alt="OneTask" />
         <span className="hq">OneTask Command</span>
         <Link to="/devices">Dispositivos</Link>
-        <button
-          className="ghost"
-          onClick={() => {
-            logout();
-            nav('/login');
-          }}
-        >
-          Logout
-        </button>
+        <button className="ghost" onClick={() => { logout(); nav('/login'); }}>Logout</button>
       </nav>
       <Routes>
         <Route path="/login" element={<Login />} />
