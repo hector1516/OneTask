@@ -220,7 +220,7 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     '  Start-Sleep -Milliseconds 200',
     '',
     '  # Select all and type new date',
-    '  TypeText "^a',
+    '  TypeText "^a",',
     '  Start-Sleep -Milliseconds 200',
     '  TypeText "' + newDate + '"',
     '  Start-Sleep -Milliseconds 300',
