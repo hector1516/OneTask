@@ -9,6 +9,7 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
 
   var ps = [
     'Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue',
+    'Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue',
     'Add-Type @"',
     'using System;',
     'using System.Runtime.InteropServices;',
@@ -43,8 +44,24 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     '  [Win32]::SetForegroundWindow($hwnd) | Out-Null',
     '  Start-Sleep -Milliseconds 500',
     '}',
+    '',
+    'function TakeScreenshot($tag) {',
+    '  try {',
+    '    $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds',
+    '    $bmp = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)',
+    '    $gfx = [System.Drawing.Graphics]::FromImage($bmp)',
+    '    $gfx.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)',
+    '    $ms = New-Object System.IO.MemoryStream',
+    '    $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)',
+    '    $b64 = [Convert]::ToBase64String($ms.ToArray())',
+    '    $gfx.Dispose(); $bmp.Dispose(); $ms.Dispose()',
+    '    Write-Output "SCREENSHOT_${tag}=$b64"',
+    '  } catch {',
+    '    Write-Output "SCREENSHOT_${tag}=ERROR"',
+    '  }',
+    '}',
 
-    '# Step 1: Find VMware main window via Get-Process',
+    '# Step 1: Find VMware',
     '$debug += "STEP=1_FIND_VMWARE"',
     '$vmProc = Get-Process -Name "vmware" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1',
     'if (-not $vmProc) {',
@@ -55,23 +72,24 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     '$vmHwnd = $vmProc.MainWindowHandle',
     '$debug += "VMWARE_HANDLE=$vmHwnd"',
     'FocusVM $vmHwnd',
+    'TakeScreenshot "01_BEFORE_UNLOCK"',
 
-    '# Step 2: Send unlock password via SendKeys (works across sessions)',
+    '# Step 2: Send unlock password',
     '$debug += "STEP=2_UNLOCK"',
     'TypeKeys "' + UNLOCK_PWD + '"',
     'Start-Sleep -Milliseconds 300',
     'TypeKeys "{ENTER}"',
     'Start-Sleep -Seconds 3',
     'FocusVM $vmHwnd',
-    '$debug += "UNLOCK_SENT=true"',
+    'TakeScreenshot "02_AFTER_UNLOCK"',
 
-    '# Step 3: Open Settings with Ctrl+D (wait for it to open)',
+    '# Step 3: Open Settings with Ctrl+D',
     '$debug += "STEP=3_CTRL_D"',
     'TypeKeys "^d"',
     'Start-Sleep -Seconds 5',
-    '$debug += "CTRL_D_SENT=true"',
+    'TakeScreenshot "03_AFTER_CTRL_D"',
 
-    '# Step 4: Tab to "Unlock All Settings" button and press it',
+    '# Step 4: Tab to Unlock All Settings',
     '$debug += "STEP=4_UNLOCK_ALL"',
     'for ($i = 0; $i -lt 15; $i++) {',
     '  PressKey ([Win32]::VK_TAB)',
@@ -79,77 +97,56 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     '}',
     'TypeKeys "{ENTER}"',
     'Start-Sleep -Seconds 3',
-    '$debug += "UNLOCK_ALL_SENT=true"',
+    'TakeScreenshot "04_AFTER_UNLOCK_ALL"',
 
-    '# Step 5: Type settings password (SendKeys goes to whatever has focus)',
+    '# Step 5: Type settings password',
     '$debug += "STEP=5_SETTINGS_PWD"',
     'TypeKeys "' + SETTINGS_PWD + '"',
     'Start-Sleep -Milliseconds 500',
     'TypeKeys "{ENTER}"',
     'Start-Sleep -Seconds 6',
-    '$debug += "SETTINGS_PWD_SENT=true"',
+    'TakeScreenshot "05_AFTER_SETTINGS_PWD"',
 
-    '# Step 5: Navigate to Options tab (Tab 4 times then Right arrow)',
-    '$debug += "STEP=5_OPTIONS_TAB"',
+    '# Step 6: Navigate to Options tab',
+    '$debug += "STEP=6_OPTIONS_TAB"',
     'for ($i = 0; $i -lt 4; $i++) {',
     '  PressKey ([Win32]::VK_TAB)',
     '  Start-Sleep -Milliseconds 150',
     '}',
-    'PressKey 0x27  # Right arrow',
+    'PressKey 0x27',
     'Start-Sleep -Milliseconds 500',
-    '$debug += "OPTIONS_TAB=true"',
+    'TakeScreenshot "06_OPTIONS_TAB"',
 
-    '# Step 6: Navigate to Access Control (down 8 times)',
-    '$debug += "STEP=6_ACCESS_CONTROL"',
+    '# Step 7: Navigate to Access Control',
+    '$debug += "STEP=7_ACCESS_CONTROL"',
     'for ($i = 0; $i -lt 8; $i++) {',
-    '  PressKey 0x28  # Down arrow',
+    '  PressKey 0x28',
     '  Start-Sleep -Milliseconds 100',
     '}',
     'Start-Sleep -Milliseconds 500',
-    '$debug += "ACCESS_CONTROL=true"',
+    'TakeScreenshot "07_ACCESS_CONTROL"',
 
-    '# Step 7: Navigate to expiration area (6 tabs)',
-    '$debug += "STEP=7_EXPIRATION"',
+    '# Step 8: Navigate to expiration area',
+    '$debug += "STEP=8_EXPIRATION"',
     'for ($i = 0; $i -lt 6; $i++) {',
     '  PressKey ([Win32]::VK_TAB)',
     '  Start-Sleep -Milliseconds 150',
     '}',
-
-    '# Toggle expiration checkbox',
     'TypeKeys "{SPACE}"',
     'Start-Sleep -Milliseconds 300',
-    '$debug += "EXPIRATION_TOGGLED=true"',
-
-    '# Tab to date field',
     'PressKey ([Win32]::VK_TAB)',
     'Start-Sleep -Milliseconds 200',
-
-    '# Select all and type new date',
     'TypeKeys "^a"',
     'Start-Sleep -Milliseconds 200',
     'TypeKeys "' + newDate + '"',
     'Start-Sleep -Milliseconds 300',
     '$debug += "DATE_TYPED=true"',
 
-    '# Click OK',
+    '# Step 9: Click OK',
     'TypeKeys "{ENTER}"',
     'Start-Sleep -Seconds 2',
+    'TakeScreenshot "09_FINAL"',
     '$debug += "OK_CLICKED=true"',
-
-    '# Take screenshot',
-    'Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue',
-    'Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue',
-    '$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds',
-    '$bmp = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)',
-    '$gfx = [System.Drawing.Graphics]::FromImage($bmp)',
-    '$gfx.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)',
-    '$ms = New-Object System.IO.MemoryStream',
-    '$bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)',
-    '$b64 = [Convert]::ToBase64String($ms.ToArray())',
-    '$gfx.Dispose()',
-    '$bmp.Dispose()',
-    '$ms.Dispose()',
-    'Write-Output "SCREENSHOT=$b64"',
 
     'foreach ($d in $debug) { Write-Output $d }',
     'Write-Output "DATE_TO_SET=' + newDate + '"'
@@ -159,9 +156,15 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     var raw = await exec(ps);
     var lines = (raw || '').split('\n').map(function(l) { return l.trim(); });
     var debug = {};
+    var screenshots = {};
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
-      if (line.indexOf('=') > 0) {
+      if (line.indexOf('SCREENSHOT_') === 0) {
+        var eq = line.indexOf('=');
+        var key = line.substring(0, eq);
+        var val = line.substring(eq + 1);
+        screenshots[key] = val;
+      } else if (line.indexOf('=') > 0) {
         var eq = line.indexOf('=');
         var key = line.substring(0, eq);
         var val = line.substring(eq + 1);
@@ -172,6 +175,7 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
       ok: !debug.ERROR,
       newDate: newDate,
       debug: debug,
+      screenshots: screenshots,
       at: new Date().toISOString()
     };
   } catch (e) {
