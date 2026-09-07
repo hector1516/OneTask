@@ -136,6 +136,21 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     'Start-Sleep -Seconds 2',
     '$debug += "OK_CLICKED=true"',
 
+    '# Take screenshot',
+    'Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue',
+    'Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue',
+    '$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds',
+    '$bmp = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)',
+    '$gfx = [System.Drawing.Graphics]::FromImage($bmp)',
+    '$gfx.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)',
+    '$ms = New-Object System.IO.MemoryStream',
+    '$bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)',
+    '$b64 = [Convert]::ToBase64String($ms.ToArray())',
+    '$gfx.Dispose()',
+    '$bmp.Dispose()',
+    '$ms.Dispose()',
+    'Write-Output "SCREENSHOT=$b64"',
+
     'foreach ($d in $debug) { Write-Output $d }',
     'Write-Output "DATE_TO_SET=' + newDate + '"'
   ].join('\r\n');
