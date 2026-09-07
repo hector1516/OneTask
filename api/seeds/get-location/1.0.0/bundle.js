@@ -1,20 +1,28 @@
 var getLocation = { id: 'get-location', version: '1.0.0', run: async function(params, ctx) {
-  // Try global fetch first (works in Tauri webview), then ctx.fetch as fallback
-  var fetchFn = (typeof fetch !== 'undefined') ? fetch : null;
-  if (!fetchFn && ctx.fetch) fetchFn = ctx.fetch;
-  if (!fetchFn) return { ok: false, error: 'fetch no disponible en el Agent', at: new Date().toISOString() };
+  if (typeof ctx.exec !== 'function') return { ok: false, error: 'ctx.exec no disponible', at: new Date().toISOString() };
+
   var apis = [
-    { url: 'http://ip-api.com/json/', parse: function(d) { return { ip: d.query, city: d.city, region: d.regionName, country: d.country, lat: d.lat, lon: d.lon }; } },
-    { url: 'https://ipapi.co/json/', parse: function(d) { return { ip: d.ip, city: d.city, region: d.region, country: d.country_name, lat: d.latitude, lon: d.longitude }; } },
-    { url: 'https://ipwho.is/', parse: function(d) { return { ip: d.ip, city: d.city, region: d.region, country: d.country, lat: d.latitude, lon: d.longitude }; } }
+    { url: 'http://ip-api.com/json/', name: 'ip-api' },
+    { url: 'https://ipapi.co/json/', name: 'ipapi' },
+    { url: 'https://ipwho.is/', name: 'ipwho' }
   ];
+
   for (var i = 0; i < apis.length; i++) {
     try {
-      var resp = await fetchFn(apis[i].url);
-      if (!resp.ok) continue;
-      var data = await resp.json();
-      var loc = apis[i].parse(data);
-      if (loc.lat && loc.lon) return { ok: true, location: loc, at: new Date().toISOString() };
+      var cmd = "Invoke-RestMethod -Uri '" + apis[i].url + "' -UseBasicParsing -TimeoutSec 8 | ConvertTo-Json -Compress";
+      var raw = await ctx.exec(cmd);
+      if (!raw || raw.indexOf('{') === -1) continue;
+      var jsonStr = raw.substring(raw.indexOf('{'));
+      var lastBrace = jsonStr.lastIndexOf('}');
+      if (lastBrace !== -1) jsonStr = jsonStr.substring(0, lastBrace + 1);
+      var data = JSON.parse(jsonStr);
+      var loc = null;
+      if (data.query && data.lat !== undefined && data.lon !== undefined) {
+        loc = { ip: data.query, city: data.city, region: data.regionName, country: data.country, lat: data.lat, lon: data.lon };
+      } else if (data.ip && data.latitude !== undefined && data.longitude !== undefined) {
+        loc = { ip: data.ip, city: data.city, region: data.region, country: data.country_name || data.country, lat: data.latitude, lon: data.longitude };
+      }
+      if (loc && loc.lat && loc.lon) return { ok: true, location: loc, at: new Date().toISOString() };
     } catch (e) { continue; }
   }
   return { ok: false, error: 'No se pudo obtener ubicacion. Verifica conexion a internet.', at: new Date().toISOString() };
