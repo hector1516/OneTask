@@ -1,0 +1,11 @@
+{
+  "name": "VMware Expiration",
+  "description": "Cambia la fecha de expiración de una VM restringida de VMware Workstation al último día del año actual. Requiere VMware abierto con la VM encendida.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.read"],
+  "configSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}
