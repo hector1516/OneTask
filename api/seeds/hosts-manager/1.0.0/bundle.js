@@ -13,20 +13,13 @@ var hostsManager = { id: 'hosts-manager', version: '1.0.0', run: async function(
     '# Check if hosts file exists',
     '$debug += "HOSTS_EXISTS=" + (Test-Path $hostsFile)',
     '',
-    '# Check permissions',
-    'try {',
-    '  $acl = Get-Acl $hostsFile',
-    '  $debug += "ACL_OK=true"',
-    '} catch {',
-    '  $debug += "ACL_ERROR=" + $_.Exception.Message',
-    '}',
-    '',
     '# Ping test to detect local network',
     '$reachable = $false',
     'try {',
-    '  $result = Test-Connection -ComputerName ' + TARGET_IP + ' -Count 1 -Quiet -TimeoutSeconds 2 -ErrorAction Stop',
-    '  $reachable = $result',
-    '  $debug += "PING_OK=" + $result',
+    '  $ping = New-Object System.Net.NetworkInformation.Ping',
+    '  $result = $ping.Send("' + TARGET_IP + '", 2000)',
+    '  $reachable = ($result.Status -eq "Success")',
+    '  $debug += "PING_OK=" + $reachable',
     '} catch {',
     '  $debug += "PING_ERROR=" + $_.Exception.Message',
     '}',
@@ -95,7 +88,9 @@ var hostsManager = { id: 'hosts-manager', version: '1.0.0', run: async function(
       }
     }
     return {
-      ok: true,
+      ok: debug.WRITE_ERROR ? false : true,
+      onLocalNetwork: debug.PING_OK === 'True',
+      ipUsed: debug.PUBLIC_IP || TARGET_IP,
       debug: debug,
       at: new Date().toISOString()
     };
