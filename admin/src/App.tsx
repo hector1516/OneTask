@@ -372,79 +372,85 @@ function DeviceDetail() {
         </div>
       </div>
 
-      {sysInfo.data?.info && (() => {
-        const info = sysInfo.data.info as Record<string, any>;
-        const os = info.os as Record<string, any> | undefined;
-        const cpu = info.cpu as Record<string, any> | undefined;
-        const uptime = info.uptime as Record<string, any> | undefined;
+      {(() => {
+        const info = (sysInfo.data?.info ?? {}) as Record<string, any>;
+        const os = (info.os ?? {}) as Record<string, any>;
+        const cpu = (info.cpu ?? {}) as Record<string, any>;
+        const uptime = (info.uptime ?? {}) as Record<string, any>;
         const disks = Array.isArray(info.disks) ? info.disks : [];
         const gpuList = Array.isArray(info.gpu) ? info.gpu : [];
         const ips = Array.isArray(info.ipAddresses) ? info.ipAddresses : [];
-        const wifi = info.wifi as Record<string, any> | undefined;
+        const wifi = (info.wifi ?? {}) as Record<string, any>;
+        const noData = !sysInfo.data?.info;
         return (
           <div className="card">
             <h3>Información del Sistema</h3>
-            <div className="muted" style={{ marginBottom: 8 }}>Actualizado: {sysInfo.data.updatedAt ?? 'desconocido'}</div>
+            <div className="muted" style={{ marginBottom: 8 }}>{noData ? 'Esperando datos del Agent…' : 'Actualizado: ' + (sysInfo.data?.updatedAt ?? 'desconocido')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-              {os && (
-                <div className="item">
-                  <div className="title">Sistema Operativo</div>
-                  <div className="sub">{os.name} {os.version}</div>
-                  <div className="sub">Build: {os.build} | {os.arch}</div>
-                  <div className="sub">Usuario: {os.user}</div>
-                </div>
-              )}
-              {cpu && (
-                <div className="item">
-                  <div className="title">CPU</div>
-                  <div className="sub">{cpu.model}</div>
-                  <div className="sub">{cpu.cores} núcleos / {cpu.threads} hilos</div>
-                  <div className="sub">Uso: {cpu.load}% | {cpu.currentMHz} MHz</div>
-                </div>
-              )}
-              {uptime && (
-                <div className="item">
-                  <div className="title">Memoria RAM</div>
-                  <div className="sub">Total: {uptime.totalMemMB} MB</div>
-                  <div className="sub">Usada: {uptime.usedMemMB} MB ({uptime.memPercent}%)</div>
-                  <div className="sub">Libre: {uptime.freeMemMB} MB</div>
-                </div>
-              )}
-              {disks.map((d: any, i: number) => (
+              <div className="item">
+                <div className="title">Sistema Operativo</div>
+                <div className="sub">{os.name ? os.name + ' ' + os.version : '—'}</div>
+                <div className="sub">{os.build ? 'Build: ' + os.build + ' | ' + os.arch : '—'}</div>
+                <div className="sub">{os.user ? 'Usuario: ' + os.user : '—'}</div>
+              </div>
+              <div className="item">
+                <div className="title">CPU</div>
+                <div className="sub">{cpu.model ?? '—'}</div>
+                <div className="sub">{cpu.cores ? cpu.cores + ' núcleos / ' + cpu.threads + ' hilos' : '—'}</div>
+                <div className="sub">{cpu.load != null ? 'Uso: ' + cpu.load + '% | ' + cpu.currentMHz + ' MHz' : '—'}</div>
+              </div>
+              <div className="item">
+                <div className="title">Memoria RAM</div>
+                <div className="sub">{uptime.totalMemMB ? 'Total: ' + uptime.totalMemMB + ' MB' : '—'}</div>
+                <div className="sub">{uptime.usedMemMB ? 'Usada: ' + uptime.usedMemMB + ' MB (' + uptime.memPercent + '%)' : '—'}</div>
+                <div className="sub">{uptime.freeMemMB ? 'Libre: ' + uptime.freeMemMB + ' MB' : '—'}</div>
+              </div>
+              {disks.length > 0 ? disks.map((d: any, i: number) => (
                 <div className="item" key={i}>
                   <div className="title">Disco {d.letter}</div>
                   <div className="sub">{d.label || 'Sin nombre'} | {d.fs}</div>
                   <div className="sub">Total: {d.totalGB} GB</div>
                   <div className="sub">Usado: {d.usedGB} GB | Libre: {d.freeGB} GB</div>
                 </div>
-              ))}
-              {gpuList.map((g: any, i: number) => (
+              )) : (
+                <div className="item">
+                  <div className="title">Disco</div>
+                  <div className="sub">—</div>
+                </div>
+              )}
+              {gpuList.length > 0 ? gpuList.map((g: any, i: number) => (
                 <div className="item" key={i}>
                   <div className="title">Gráfica</div>
-                  <div className="sub">{g.name}</div>
+                  <div className="sub">{g.name ?? '—'}</div>
                   {g.vramMB && <div className="sub">VRAM: {g.vramMB} MB</div>}
                   {g.driver && <div className="sub">Driver: {g.driver}</div>}
                 </div>
-              ))}
-              {info.hostname && (
+              )) : (
                 <div className="item">
-                  <div className="title">Hostname</div>
-                  <div className="sub">{info.hostname}</div>
+                  <div className="title">Gráfica</div>
+                  <div className="sub">—</div>
                 </div>
               )}
-              {ips.map((ip: any, i: number) => (
+              <div className="item">
+                <div className="title">Hostname</div>
+                <div className="sub">{info.hostname ?? '—'}</div>
+              </div>
+              {ips.length > 0 ? ips.map((ip: any, i: number) => (
                 <div className="item" key={i}>
                   <div className="title">IP ({ip.interface})</div>
                   <div className="sub">{ip.ip}/{ip.prefix}</div>
                 </div>
-              ))}
-              {wifi?.ssid && (
+              )) : (
                 <div className="item">
-                  <div className="title">WiFi</div>
-                  <div className="sub">{wifi.ssid}</div>
-                  <div className="sub">Señal: {wifi.signal}</div>
+                  <div className="title">IP</div>
+                  <div className="sub">—</div>
                 </div>
               )}
+              <div className="item">
+                <div className="title">WiFi</div>
+                <div className="sub">{wifi?.ssid ?? '—'}</div>
+                <div className="sub">{wifi?.signal ? 'Señal: ' + wifi.signal : '—'}</div>
+              </div>
             </div>
           </div>
         );
@@ -463,30 +469,36 @@ function DeviceDetail() {
         }
         return (
           <>
-            {lastScreenshot && (
-              <div className="card">
-                <h3>Último Screenshot</h3>
+            <div className="card">
+              <h3>Último Screenshot</h3>
+              {lastScreenshot ? (
                 <img
                   src={`data:image/png;base64,${lastScreenshot}`}
                   alt="Screenshot"
                   style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid var(--line)' }}
                 />
-              </div>
-            )}
-            {lastLocation && lastLocation.lat && lastLocation.lon && (
-              <div className="card">
-                <h3>Última Ubicación</h3>
-                <div className="sub">📍 {lastLocation.city}, {lastLocation.region}, {lastLocation.country} — IP: {lastLocation.ip}</div>
-                <a
-                  href={`https://www.google.com/maps?q=${lastLocation.lat},${lastLocation.lon}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: 'inline-block', marginTop: 8, padding: '6px 14px', background: 'var(--accent)', color: '#000', borderRadius: 4, fontSize: '0.85rem', textDecoration: 'none' }}
-                >
-                  Abrir en Google Maps
-                </a>
-              </div>
-            )}
+              ) : (
+                <div className="muted" style={{ padding: 20, textAlign: 'center' }}>Sin screenshot — ejecuta el módulo screenshot</div>
+              )}
+            </div>
+            <div className="card">
+              <h3>Última Ubicación</h3>
+              {lastLocation && lastLocation.lat && lastLocation.lon ? (
+                <>
+                  <div className="sub">📍 {lastLocation.city}, {lastLocation.region}, {lastLocation.country} — IP: {lastLocation.ip}</div>
+                  <a
+                    href={`https://www.google.com/maps?q=${lastLocation.lat},${lastLocation.lon}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'inline-block', marginTop: 8, padding: '6px 14px', background: 'var(--accent)', color: '#000', borderRadius: 4, fontSize: '0.85rem', textDecoration: 'none' }}
+                  >
+                    Abrir en Google Maps
+                  </a>
+                </>
+              ) : (
+                <div className="muted" style={{ padding: 20, textAlign: 'center' }}>Sin ubicación — ejecuta el módulo get-location</div>
+              )}
+            </div>
           </>
         );
       })()}

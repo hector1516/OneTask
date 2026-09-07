@@ -294,7 +294,7 @@ router.post(
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const deviceName = typeof req.headers['x-device-name'] === 'string' ? (req.headers['x-device-name'] as string) : undefined;
     console.log(`[agent] POST /results deviceId=${req.body?.deviceId} name=${deviceName ?? '?'} module=${req.body?.module?.id} status=${req.body?.execution?.status}`);
-    const { deviceId, module, queue, execution, reportedAt } = req.body ?? {};
+    const { deviceId, module, queue, execution, reportedAt, output } = req.body ?? {};
     if (!deviceId) {
       res.status(400).json({ error: 'deviceId requerido' });
       return;
@@ -305,6 +305,7 @@ router.post(
       const d = new Date(String(v));
       return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 19).replace('T', ' ');
     };
+    const rawOutput = output ?? req.body?.result ?? null;
     await pool.query(
       `INSERT INTO module_results
         (device_id, module_id, module_name, module_description, module_version,
@@ -326,7 +327,7 @@ router.post(
         toDate(execution?.startedAt),
         toDate(execution?.finishedAt),
         toDate(reportedAt),
-        JSON.stringify(req.body),
+        JSON.stringify({ ...req.body, output: rawOutput }),
       ],
     );
     // Marca best-effort: si el Agent reporta done/failed con startedAt coincidente, cierra pendientes.
