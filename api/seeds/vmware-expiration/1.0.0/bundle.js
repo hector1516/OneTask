@@ -89,13 +89,9 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     'Start-Sleep -Seconds 5',
     'TakeScreenshot "03_AFTER_CTRL_D"',
 
-    '# Step 4: Tab to Unlock All Settings',
+    '# Step 4: Click Unlock All Settings with Alt+U',
     '$debug += "STEP=4_UNLOCK_ALL"',
-    'for ($i = 0; $i -lt 15; $i++) {',
-    '  PressKey ([Win32]::VK_TAB)',
-    '  Start-Sleep -Milliseconds 100',
-    '}',
-    'TypeKeys "{ENTER}"',
+    'TypeKeys "%u"',
     'Start-Sleep -Seconds 3',
     'TakeScreenshot "04_AFTER_UNLOCK_ALL"',
 
@@ -107,13 +103,9 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     'Start-Sleep -Seconds 6',
     'TakeScreenshot "05_AFTER_SETTINGS_PWD"',
 
-    '# Step 6: Navigate to Options tab',
+    '# Step 6: Navigate to Options tab (Ctrl+Tab to switch tabs)',
     '$debug += "STEP=6_OPTIONS_TAB"',
-    'for ($i = 0; $i -lt 4; $i++) {',
-    '  PressKey ([Win32]::VK_TAB)',
-    '  Start-Sleep -Milliseconds 150',
-    '}',
-    'PressKey 0x27',
+    'TypeKeys "^(^{TAB})"',
     'Start-Sleep -Milliseconds 500',
     'TakeScreenshot "06_OPTIONS_TAB"',
 
