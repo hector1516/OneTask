@@ -76,7 +76,7 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     'TypeKeys "' + SETTINGS_PWD + '"',
     'Start-Sleep -Milliseconds 500',
     'TypeKeys "{ENTER}"',
-    'Start-Sleep -Seconds 3',
+    'Start-Sleep -Seconds 6',
     '$debug += "SETTINGS_PWD_SENT=true"',
 
     '# Step 5: Navigate to Options tab (Tab 4 times then Right arrow)',
