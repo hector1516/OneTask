@@ -1,9 +1,11 @@
 {
-  "id": "hosts-manager",
   "name": "Host Manager VMware",
-  "version": "1.0.0",
   "description": "Configura el archivo hosts de Windows. Si el cliente esta en la red local (ping a 192.168.1.65), usa esa IP. Si no, obtiene la IP publica del servidor.",
   "entry": "bundle.js",
   "minCoreVersion": "0.1.0",
-  "permissions": ["system.exec", "net.fetch"]
+  "permissions": ["system.read"],
+  "configSchema": {
+    "type": "object",
+    "properties": {}
+  }
 }
