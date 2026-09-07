@@ -1,0 +1,11 @@
+{
+  "name": "System Info",
+  "description": "Recolecta información completa del sistema: OS, CPU, RAM, discos, GPU, red, WiFi, procesos, seguridad, software, USB, impresoras, Bluetooth, usuarios.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.read"],
+  "configSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}

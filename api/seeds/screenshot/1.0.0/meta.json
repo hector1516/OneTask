@@ -1,0 +1,11 @@
+{
+  "name": "Screenshot",
+  "description": "Captura una imagen de la pantalla actual del dispositivo.",
+  "entry": "bundle.js",
+  "minCoreVersion": "0.1.0",
+  "permissions": ["system.read"],
+  "configSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}
