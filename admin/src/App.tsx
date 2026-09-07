@@ -770,7 +770,7 @@ function SearchPanel() {
                 {r.vm_type && <span className="sub">{r.vm_type}</span>}
               </div>
               {r.vm_path && <div className="sub" style={{ fontFamily: 'monospace', fontSize: '0.8rem', marginTop: 4 }}>{r.vm_path}</div>}
-              {r.info && <pre className="sub" style={{ fontSize: '0.75rem', marginTop: 4, whiteSpace: 'pre-wrap' }}>{JSON.stringify(r.info, null, 2).substring(0, 300)}</pre>}
+              {r.info && <pre className="sub" style={{ fontSize: '0.75rem', marginTop: 4, whiteSpace: 'pre-wrap' }}>{String(JSON.stringify(r.info, null, 2).substring(0, 300))}</pre>}
             </div>
           ))}
         </div>
