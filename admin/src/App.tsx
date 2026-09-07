@@ -212,12 +212,26 @@ function DeviceDetail() {
   // Extract last screenshot & location from results
   const allResults = results.data?.results ?? [];
   let lastScreenshot: string | null = null;
+  let lastScreenshotError: string | null = null;
   let lastLocation: { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } | null = null;
+  let lastLocationError: string | null = null;
   for (const r of allResults) {
     const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
     const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
-    if (!lastScreenshot && output.format === 'png' && typeof output.base64 === 'string') lastScreenshot = output.base64;
-    if (!lastLocation && typeof output.location === 'object' && output.location !== null) lastLocation = output.location as any;
+    if (r.moduleId === 'screenshot' && !lastScreenshot) {
+      if (output.format === 'png' && typeof output.base64 === 'string') {
+        lastScreenshot = output.base64;
+      } else if (output.ok === false && output.error) {
+        lastScreenshotError = String(output.error);
+      }
+    }
+    if (r.moduleId === 'get-location' && !lastLocation) {
+      if (typeof output.location === 'object' && output.location !== null) {
+        lastLocation = output.location as any;
+      } else if (output.ok === false && output.error) {
+        lastLocationError = String(output.error);
+      }
+    }
     if (lastScreenshot && lastLocation) break;
   }
 
@@ -289,6 +303,8 @@ function DeviceDetail() {
             </div>
             {lastScreenshot ? (
               <img src={`data:image/png;base64,${lastScreenshot}`} alt="Screenshot" className="screenshot-img" />
+            ) : lastScreenshotError ? (
+              <div className="dash-empty" style={{borderColor:'var(--red)', color:'#ffb4a2'}}>⚠ Error: {lastScreenshotError}</div>
             ) : (
               <div className="dash-empty">Sin screenshot — ejecuta el módulo <b>screenshot</b></div>
             )}
@@ -307,6 +323,8 @@ function DeviceDetail() {
                 <div className="dash-loc-coords">Lat: {lastLocation.lat} · Lon: {lastLocation.lon}</div>
                 <a href={`https://www.google.com/maps?q=${lastLocation.lat},${lastLocation.lon}`} target="_blank" rel="noopener noreferrer" className="btn-maps">Abrir en Google Maps</a>
               </div>
+            ) : lastLocationError ? (
+              <div className="dash-empty" style={{borderColor:'var(--red)', color:'#ffb4a2'}}>⚠ Error: {lastLocationError}</div>
             ) : (
               <div className="dash-empty">Sin ubicación — ejecuta el módulo <b>get-location</b></div>
             )}
