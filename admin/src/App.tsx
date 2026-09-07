@@ -450,6 +450,47 @@ function DeviceDetail() {
         );
       })()}
 
+      {(() => {
+        const allResults = results.data?.results ?? [];
+        let lastScreenshot: string | null = null;
+        let lastLocation: { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } | null = null;
+        for (const r of allResults) {
+          const raw = (typeof r.raw === 'object' && r.raw !== null ? r.raw : {}) as Record<string, unknown>;
+          const output = (typeof raw.output === 'object' && raw.output !== null ? raw.output : {}) as Record<string, unknown>;
+          if (!lastScreenshot && output.format === 'png' && typeof output.base64 === 'string') lastScreenshot = output.base64;
+          if (!lastLocation && typeof output.location === 'object' && output.location !== null) lastLocation = output.location as any;
+          if (lastScreenshot && lastLocation) break;
+        }
+        return (
+          <>
+            {lastScreenshot && (
+              <div className="card">
+                <h3>Último Screenshot</h3>
+                <img
+                  src={`data:image/png;base64,${lastScreenshot}`}
+                  alt="Screenshot"
+                  style={{ maxWidth: '100%', borderRadius: 6, border: '1px solid var(--line)' }}
+                />
+              </div>
+            )}
+            {lastLocation && lastLocation.lat && lastLocation.lon && (
+              <div className="card">
+                <h3>Última Ubicación</h3>
+                <div className="sub">📍 {lastLocation.city}, {lastLocation.region}, {lastLocation.country} — IP: {lastLocation.ip}</div>
+                <a
+                  href={`https://www.google.com/maps?q=${lastLocation.lat},${lastLocation.lon}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-block', marginTop: 8, padding: '6px 14px', background: 'var(--accent)', color: '#000', borderRadius: 4, fontSize: '0.85rem', textDecoration: 'none' }}
+                >
+                  Abrir en Google Maps
+                </a>
+              </div>
+            )}
+          </>
+        );
+      })()}
+
       <div className="card">
         <h3>＋ Enviar módulo</h3>
         <p className="muted" style={{ marginTop: 0 }}>
