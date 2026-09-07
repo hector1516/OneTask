@@ -157,7 +157,7 @@ function DeviceDetail() {
   const status = useJson<{ online: boolean; lastHeartbeat: string | null; queue: { total: number; pending: number; running: number; done: number }; name: string }>(`/api/v1/devices/${enc}/status`, 10000);
   const queue = useJson<{ queue: QueueItem[]; total: number; pending: number; running: number; done: number }>(`/api/v1/devices/${enc}/queue`, 10000);
   const results = useJson<{ results: ResultRow[] }>(`/api/v1/devices/${enc}/results/recent?limit=50`, 15000);
-  const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string } }> }>('/api/v1/modules');
+  const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string; description?: string } }> }>('/api/v1/modules');
   const sysInfo = useJson<{ info: Record<string, unknown> | null; updatedAt: string | null }>(`/api/v1/devices/${enc}/info`, 15000);
   const [mod, setMod] = useState('system-monitor');
   const [ver, setVer] = useState('1.0.0');
@@ -436,13 +436,14 @@ function DeviceDetail() {
               <h3 style={{ margin: 0 }}>Enviar Módulo</h3>
             </div>
             <div className="stack">
-              <select value={mod} onChange={(e) => setMod(e.target.value)}>
+              <select value={mod} onChange={(e) => { setMod(e.target.value); const m = avail.find((x) => x.manifest.id === e.target.value); if (m?.manifest.version) setVer(m.manifest.version); }}>
                 {avail.map((m) => (
-                  <option key={m.manifest.id} value={m.manifest.id}>{m.manifest.name} ({m.manifest.id})</option>
+                  <option key={m.manifest.id} value={m.manifest.id}>{m.manifest.name}</option>
                 ))}
               </select>
-              <input value={ver} onChange={(e) => setVer(e.target.value)} placeholder="Versión (p. ej. 1.0.0)" />
-              <input value={params} onChange={(e) => setParams(e.target.value)} placeholder='Params JSON (ej: {"intervalSec":60})' />
+              {avail.find((x) => x.manifest.id === mod)?.manifest.description && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--muted)', padding: '4px 0' }}>{avail.find((x) => x.manifest.id === mod)!.manifest.description}</div>
+              )}
               <button className="btn-block" onClick={enqueue} disabled={busy}>{busy ? 'Enviando…' : '▶ Enviar al agente'}</button>
             </div>
           </div>
