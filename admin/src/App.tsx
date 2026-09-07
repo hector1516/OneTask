@@ -221,16 +221,23 @@ function DeviceDetail() {
     if (lastScreenshot && lastLocation) break;
   }
 
-  // System info
+  // System info — Agent sends flat structure
   const info = (sysInfo.data?.info ?? {}) as Record<string, any>;
-  const os = (info.os ?? {}) as Record<string, any>;
-  const cpu = (info.cpu ?? {}) as Record<string, any>;
-  const uptime = (info.uptime ?? {}) as Record<string, any>;
-  const disks = Array.isArray(info.disks) ? info.disks : [];
-  const gpuList = Array.isArray(info.gpu) ? info.gpu : [];
-  const ips = Array.isArray(info.ipAddresses) ? info.ipAddresses : [];
-  const wifi = (info.wifi ?? {}) as Record<string, any>;
   const hostname = info.hostname as string | undefined;
+  const osName = info.os_name as string | undefined;
+  const osVersion = info.os_version as string | undefined;
+  const kernelVersion = info.kernel_version as string | undefined;
+  const cpuBrand = info.cpu_brand as string | undefined;
+  const cpuCoresPhysical = info.cpu_cores_physical as number | undefined;
+  const cpuCoresLogical = info.cpu_cores_logical as number | undefined;
+  const cpuUsage = info.cpu_usage_percent as number | undefined;
+  const memTotalGB = info.memory_total_gb as number | undefined;
+  const memUsedGB = info.memory_used_gb as number | undefined;
+  const memAvailGB = info.memory_available_gb as number | undefined;
+  const memPercent = memTotalGB && memUsedGB != null ? Math.round((memUsedGB / memTotalGB) * 100) : null;
+  const uptimeFormatted = info.uptime_formatted as string | undefined;
+  const disks = Array.isArray(info.disks) ? info.disks : [];
+  const gpuRaw = info.gpu as string | undefined;
 
   return (
     <div>
@@ -315,21 +322,21 @@ function DeviceDetail() {
             <div className="sys-grid">
               <div className="sys-cell">
                 <div className="sys-label">Sistema Operativo</div>
-                <div className="sys-value">{os.name ? `${os.name} ${os.version}` : '—'}</div>
-                <div className="sys-sub">{os.build ? `Build ${os.build} · ${os.arch}` : '—'}</div>
+                <div className="sys-value">{osName ? `${osName} ${osVersion ?? ''}` : '—'}</div>
+                <div className="sys-sub">{kernelVersion ? `Build ${kernelVersion}` : '—'}</div>
               </div>
               <div className="sys-cell">
                 <div className="sys-label">CPU</div>
-                <div className="sys-value">{cpu.model ?? '—'}</div>
-                <div className="sys-sub">{cpu.cores ? `${cpu.cores} núcleos / ${cpu.threads} hilos` : '—'}</div>
-                <div className="sys-sub">{cpu.load != null ? `${cpu.load}% · ${cpu.currentMHz} MHz` : ''}</div>
+                <div className="sys-value">{cpuBrand ?? '—'}</div>
+                <div className="sys-sub">{cpuCoresPhysical ? `${cpuCoresPhysical} núcleos / ${cpuCoresLogical ?? '?'} hilos` : '—'}</div>
+                <div className="sys-sub">{cpuUsage != null ? `${cpuUsage}%` : ''}</div>
               </div>
               <div className="sys-cell">
                 <div className="sys-label">RAM</div>
-                <div className="sys-value">{uptime.totalMemMB ? `${uptime.totalMemMB} MB` : '—'}</div>
-                <div className="sys-sub">{uptime.usedMemMB ? `Usada: ${uptime.usedMemMB} MB (${uptime.memPercent}%)` : '—'}</div>
-                {uptime.memPercent != null && (
-                  <div className="sys-bar"><div className="sys-bar-fill" style={{ width: `${uptime.memPercent}%` }} /></div>
+                <div className="sys-value">{memTotalGB ? `${Math.round(memTotalGB * 1024)} MB` : '—'}</div>
+                <div className="sys-sub">{memUsedGB != null ? `Usada: ${Math.round(memUsedGB * 1024)} MB (${memPercent}%)` : '—'}</div>
+                {memPercent != null && (
+                  <div className="sys-bar"><div className="sys-bar-fill" style={{ width: `${memPercent}%` }} /></div>
                 )}
               </div>
               <div className="sys-cell">
@@ -337,13 +344,13 @@ function DeviceDetail() {
                 <div className="sys-value">{hostname ?? '—'}</div>
               </div>
               <div className="sys-cell">
-                <div className="sys-label">IP Local</div>
-                <div className="sys-value">{ips.length > 0 ? ips.map((ip: any) => ip.ip).join(', ') : '—'}</div>
+                <div className="sys-label">Uptime</div>
+                <div className="sys-value">{uptimeFormatted ?? '—'}</div>
               </div>
               <div className="sys-cell">
-                <div className="sys-label">WiFi</div>
-                <div className="sys-value">{wifi?.ssid ?? '—'}</div>
-                <div className="sys-sub">{wifi?.signal ? `Señal: ${wifi.signal}` : ''}</div>
+                <div className="sys-label">Dispositivo</div>
+                <div className="sys-value">{info.battery ?? '—'}</div>
+                <div className="sys-sub">{info.network ?? ''}</div>
               </div>
             </div>
           </div>
@@ -356,16 +363,20 @@ function DeviceDetail() {
             </div>
             {disks.length > 0 ? (
               <div className="sys-grid">
-                {disks.map((d: any, i: number) => (
-                  <div className="sys-cell" key={i}>
-                    <div className="sys-label">Disco {d.letter}</div>
-                    <div className="sys-value">{d.label || 'Sin nombre'} · {d.fs}</div>
-                    <div className="sys-sub">Total: {d.totalGB} GB · Libre: {d.freeGB} GB</div>
-                    {d.totalGB && d.freeGB != null && (
-                      <div className="sys-bar"><div className="sys-bar-fill disk-bar" style={{ width: `${Math.round(((d.totalGB - d.freeGB) / d.totalGB) * 100)}%` }} /></div>
-                    )}
-                  </div>
-                ))}
+                {disks.map((d: any, i: number) => {
+                  const usedGB = d.used_gb ?? (d.total_gb && d.available_gb ? d.total_gb - d.available_gb : null);
+                  const pct = d.total_gb && usedGB != null ? Math.round((usedGB / d.total_gb) * 100) : null;
+                  return (
+                    <div className="sys-cell" key={i}>
+                      <div className="sys-label">Disco {d.mount ?? d.letter ?? i}</div>
+                      <div className="sys-value">{d.name || 'Sin nombre'} · {d.fs}</div>
+                      <div className="sys-sub">Total: {d.total_gb ?? d.totalGB ?? '?'} GB · Libre: {d.available_gb ?? d.freeGB ?? '?'} GB</div>
+                      {pct != null && (
+                        <div className="sys-bar"><div className="sys-bar-fill disk-bar" style={{ width: `${pct}%` }} /></div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : <div className="dash-empty">Sin datos de discos</div>}
           </div>
@@ -376,15 +387,11 @@ function DeviceDetail() {
               <span className="dash-icon">🎮</span>
               <h3 style={{ margin: 0 }}>Gráfica</h3>
             </div>
-            {gpuList.length > 0 ? (
+            {gpuRaw && gpuRaw !== 'N/A (requiere WMI)' && gpuRaw !== 'N/A' ? (
               <div className="sys-grid">
-                {gpuList.map((g: any, i: number) => (
-                  <div className="sys-cell" key={i}>
-                    <div className="sys-value">{g.name ?? '—'}</div>
-                    {g.vramMB && <div className="sys-sub">VRAM: {g.vramMB} MB</div>}
-                    {g.driver && <div className="sys-sub">Driver: {g.driver}</div>}
-                  </div>
-                ))}
+                <div className="sys-cell">
+                  <div className="sys-value">{gpuRaw}</div>
+                </div>
               </div>
             ) : <div className="dash-empty">Sin datos de gráfica</div>}
           </div>
