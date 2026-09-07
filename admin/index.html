@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="OneTask Command — administra módulos, dispositivos y colas de misiones." />
+    <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" type="image/jpeg" href="/logo.jpg" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
@@ -19,6 +20,6 @@
         navigator.serviceWorker.register('/sw.js');
       }
     </script>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" data-cfasync="false" src="/src/main.tsx"></script>
   </body>
 </html>

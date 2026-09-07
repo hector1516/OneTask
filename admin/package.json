@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node -e \"const fs=require('fs');const f='dist/index.html';let h=fs.readFileSync(f,'utf8');h=h.replace(/<script type=\\\"module\\\"/g,'<script type=\\\"module\\\" data-cfasync=\\\"false\\\"');fs.writeFileSync(f,h);\"",
     "preview": "vite preview"
   },
   "dependencies": {
