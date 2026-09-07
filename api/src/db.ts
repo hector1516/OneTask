@@ -92,6 +92,17 @@ CREATE TABLE IF NOT EXISTS device_system_info (
   info JSON NOT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS device_vms (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  device_id VARCHAR(128) NOT NULL,
+  vm_type VARCHAR(64) NOT NULL DEFAULT '',
+  vm_path TEXT NOT NULL,
+  vm_size_mb DECIMAL(10,1) NOT NULL DEFAULT 0,
+  vm_modified VARCHAR(32) NOT NULL DEFAULT '',
+  scanned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_vms_device (device_id),
+  CONSTRAINT fk_vms_device FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 `;
 
 export async function migrate(): Promise<void> {

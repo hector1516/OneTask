@@ -168,13 +168,14 @@ function DeviceDetail() {
   const results = useJson<{ results: ResultRow[] }>(`/api/v1/devices/${enc}/results/recent?limit=50`, 15000);
   const modules = useJson<{ modules: Array<{ manifest: { id: string; name: string; version: string; description?: string } }> }>('/api/v1/modules');
   const sysInfo = useJson<{ info: Record<string, unknown> | null; updatedAt: string | null }>(`/api/v1/devices/${enc}/info`, 15000);
+  const vms = useJson<{ vms: Array<{ vm_type: string; vm_path: string; vm_size_mb: number; vm_modified: string; scanned_at: string }> }>(`/api/v1/devices/${enc}/vms`, 30000);
   const [mod, setMod] = useState('system-monitor');
   const [ver, setVer] = useState('1.0.0');
   const [params, setParams] = useState('{}');
   const [busy, setBusy] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
-  const [tab, setTab] = useState<'info' | 'buffer' | 'history'>('info');
+  const [tab, setTab] = useState<'info' | 'vms' | 'buffer' | 'history'>('info');
   const q = queue.data;
   const pct = q && q.total > 0 ? Math.round((q.done / q.total) * 100) : 0;
   const avail = modules.data?.modules ?? [];
@@ -305,6 +306,7 @@ function DeviceDetail() {
       {/* TABS */}
       <div className="tab-bar">
         <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Panel</button>
+        <button className={`tab ${tab === 'vms' ? 'active' : ''}`} onClick={() => setTab('vms')}>VMs ({vms.data?.vms?.length ?? 0})</button>
         <button className={`tab ${tab === 'buffer' ? 'active' : ''}`} onClick={() => setTab('buffer')}>Buffer ({activeCount})</button>
         <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>Historial ({allResults.length})</button>
       </div>
@@ -514,6 +516,54 @@ function DeviceDetail() {
             </div>
           )}
         </>
+      )}
+
+      {/* TAB: VMS */}
+      {tab === 'vms' && (
+        <div className="card dash-card">
+          <div className="dash-card-header">
+            <span className="dash-icon">💻</span>
+            <h3 style={{ margin: 0, flex: 1 }}>Máquinas Virtuales</h3>
+            <button className="ghost btn-sm" onClick={() => vms.reload()}>↻</button>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            {(vms.data?.vms?.length ?? 0) === 0 ? (
+              <div className="muted">Sin VMs detectadas. Envía el módulo "Scan VMs" para escanear.</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                      <th style={{ padding: '8px 6px' }}>Tipo</th>
+                      <th style={{ padding: '8px 6px' }}>Ruta</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'right' }}>Tamaño</th>
+                      <th style={{ padding: '8px 6px' }}>Modificado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vms.data?.vms?.map((vm, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '6px' }}>
+                          <span className="badge" style={{ background: vm.vm_type === 'VMware' ? '#4a90d9' : vm.vm_type === 'VirtualBox' ? '#3b7dd8' : vm.vm_type === 'Hyper-V' || vm.vm_type === 'Hyper-V (New)' ? '#0078d4' : '#888', color: '#fff' }}>
+                            {vm.vm_type}
+                          </span>
+                        </td>
+                        <td style={{ padding: '6px', wordBreak: 'break-all', maxWidth: 400, fontFamily: 'monospace', fontSize: '0.8rem' }}>{vm.vm_path}</td>
+                        <td style={{ padding: '6px', textAlign: 'right', whiteSpace: 'nowrap' }}>{vm.vm_size_mb > 0 ? `${vm.vm_size_mb} MB` : '-'}</td>
+                        <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>{vm.vm_modified}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {vms.data?.vms && vms.data.vms.length > 0 && (
+              <div className="muted" style={{ marginTop: 8, fontSize: '0.8rem' }}>
+                Último escaneo: {vms.data.vms[0]?.scanned_at ?? 'N/A'} · Total: {vms.data.vms.length} VMs
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* TAB: HISTORY */}

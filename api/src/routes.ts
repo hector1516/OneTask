@@ -349,6 +349,20 @@ router.post(
     } catch {
       /* best-effort */
     }
+    // If scan-vms results, save VMs to device_vms table
+    try {
+      if (module?.id === 'scan-vms' && rawOutput && rawOutput.vms && Array.isArray(rawOutput.vms)) {
+        await pool.query('DELETE FROM device_vms WHERE device_id = ?', [String(deviceId)]);
+        for (const vm of rawOutput.vms) {
+          await pool.query(
+            'INSERT INTO device_vms (device_id, vm_type, vm_path, vm_size_mb, vm_modified) VALUES (?, ?, ?, ?, ?)',
+            [String(deviceId), vm.type || '', vm.path || '', vm.sizeMB || 0, vm.modified || ''],
+          );
+        }
+      }
+    } catch {
+      /* best-effort */
+    }
     res.status(201).json({ ok: true });
   }),
 );
@@ -446,6 +460,20 @@ router.put(
       [deviceId, JSON.stringify(info)],
     );
     res.json({ ok: true });
+  }),
+);
+
+router.get(
+  '/api/v1/devices/:id/vms',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deviceId = (req.params.id ?? '').trim();
+    if (!deviceId) { res.status(400).json({ error: 'deviceId requerido' }); return; }
+    const [rows] = await pool.query(
+      'SELECT vm_type, vm_path, vm_size_mb, vm_modified, scanned_at FROM device_vms WHERE device_id = ? ORDER BY vm_type, vm_path',
+      [deviceId],
+    );
+    res.json({ vms: rows });
   }),
 );
 
