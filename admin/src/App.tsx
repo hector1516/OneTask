@@ -253,6 +253,12 @@ function DeviceDetail() {
   const disks = Array.isArray(info.disks) ? info.disks : [];
   const gpuRaw = info.gpu as string | undefined;
 
+  // Split queue into active vs completed
+  const allQueue = q?.queue ?? [];
+  const activeItems = allQueue.filter((it) => it.status === 'pending' || it.status === 'running');
+  const completedItems = allQueue.filter((it) => it.status === 'done' || it.status === 'failed');
+  const activeCount = activeItems.length;
+
   return (
     <div>
       <Link to="/devices" style={{ fontSize: '0.9rem' }}>← Volver a dispositivos</Link>
@@ -288,7 +294,7 @@ function DeviceDetail() {
       {/* TABS */}
       <div className="tab-bar">
         <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Panel</button>
-        <button className={`tab ${tab === 'buffer' ? 'active' : ''}`} onClick={() => setTab('buffer')}>Buffer ({q?.queue?.length ?? 0})</button>
+        <button className={`tab ${tab === 'buffer' ? 'active' : ''}`} onClick={() => setTab('buffer')}>Buffer ({activeCount})</button>
         <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>Historial ({allResults.length})</button>
       </div>
 
@@ -436,35 +442,59 @@ function DeviceDetail() {
 
       {/* TAB: BUFFER */}
       {tab === 'buffer' && (
-        <div className="card dash-card">
-          <div className="dash-card-header">
-            <span className="dash-icon">📋</span>
-            <h3 style={{ margin: 0, flex: 1 }}>Buffer</h3>
-            {(q?.queue?.length ?? 0) > 0 && (
-              <>
-                <button className="ghost btn-sm" onClick={cancelAll}>✕ Cancelar activas</button>
-                <button className="ghost btn-sm" onClick={clearAll}>✕ Vaciar todo</button>
-              </>
-            )}
-          </div>
-          <div className="list">
-            {(q?.queue ?? []).map((it) => (
-              <div className="item" key={it.id}>
-                <div className="title">{it.moduleName} <span className="muted">#{it.id}</span></div>
-                <div className="sub">{it.moduleId}@{it.version}</div>
-                {it.moduleDescription ? <div className="sub">{it.moduleDescription}</div> : null}
-                <div className="meta">
-                  <span className={`badge ${it.status}`}>{STATUS_ES[it.status] ?? it.status}</span>
-                  <span className="muted">{it.queuedAt}</span>
-                  {(it.status === 'pending' || it.status === 'running') && (
+        <>
+          {/* Active tasks */}
+          <div className="card dash-card">
+            <div className="dash-card-header">
+              <span className="dash-icon">📋</span>
+              <h3 style={{ margin: 0, flex: 1 }}>Activas ({activeCount})</h3>
+              {activeCount > 0 && (
+                <>
+                  <button className="ghost btn-sm" onClick={cancelAll}>✕ Cancelar activas</button>
+                  <button className="ghost btn-sm" onClick={clearAll}>✕ Vaciar todo</button>
+                </>
+              )}
+            </div>
+            <div className="list">
+              {activeItems.map((it) => (
+                <div className="item" key={it.id}>
+                  <div className="title">{it.moduleName} <span className="muted">#{it.id}</span></div>
+                  <div className="sub">{it.moduleId}@{it.version}</div>
+                  {it.moduleDescription ? <div className="sub">{it.moduleDescription}</div> : null}
+                  <div className="meta">
+                    <span className={`badge ${it.status}`}>{STATUS_ES[it.status] ?? it.status}</span>
+                    <span className="muted">{it.queuedAt}</span>
                     <button className="ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => cancel(it.id)}>✕ Cancelar</button>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {(q?.queue?.length ?? 0) === 0 && <div className="dash-empty">Buffer vacío</div>}
+              ))}
+              {activeCount === 0 && <div className="dash-empty">Sin tareas activas</div>}
+            </div>
           </div>
-        </div>
+
+          {/* Completed tasks */}
+          {completedItems.length > 0 && (
+            <div className="card dash-card">
+              <div className="dash-card-header">
+                <span className="dash-icon">✓</span>
+                <h3 style={{ margin: 0, flex: 1 }}>Completadas ({completedItems.length})</h3>
+                <button className="ghost btn-sm" onClick={clearAll}>✕ Limpiar</button>
+              </div>
+              <div className="list">
+                {completedItems.map((it) => (
+                  <div className="item" key={it.id} style={{ opacity: 0.7 }}>
+                    <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                      <span className={`badge ${it.status}`} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>{STATUS_ES[it.status] ?? it.status}</span>
+                      <span style={{ fontWeight: 600 }}>{it.moduleName}</span>
+                      <span className="muted" style={{ fontSize: '0.75rem' }}>#{it.id}</span>
+                      <span className="muted" style={{ fontSize: '0.75rem', marginLeft: 'auto' }}>{it.queuedAt}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* TAB: HISTORY */}
