@@ -9,7 +9,7 @@ var getLocation = { id: 'get-location', version: '1.0.0', run: async function(pa
 
   for (var i = 0; i < apis.length; i++) {
     try {
-      var cmd = "Invoke-RestMethod -Uri '" + apis[i].url + "' -UseBasicParsing -TimeoutSec 8 | ConvertTo-Json -Compress";
+      var cmd = "Get-Date | Out-Null; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Invoke-RestMethod -Uri '" + apis[i].url + "' -UseBasicParsing -TimeoutSec 8 | ConvertTo-Json -Compress";
       var raw = await ctx.exec(cmd);
       if (!raw || raw.indexOf('{') === -1) continue;
       var jsonStr = raw.substring(raw.indexOf('{'));
