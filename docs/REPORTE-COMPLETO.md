@@ -111,7 +111,7 @@ El Agent hace pull periódico al server, descarga tareas de una cola, ejecuta m�
 |-------|-------|
 | Repo | `https://github.com/hector1516/OneTask` |
 | Branch | `master` |
-| Token | `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` ⚠️ ROTAR |
+| Token | `<VER .env>` ⚠️ ROTAR |
 
 ### ZeroTier
 | Campo | Valor |
