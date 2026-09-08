@@ -48,23 +48,21 @@ var vmwareExpiration = { id: 'vmware-expiration', version: '1.0.0', run: async f
     '# 3. Ctrl+D to open Settings',
     'TypeKeys "^d"',
     'Start-Sleep -Seconds 10',
-    'FocusVM $vmHwnd',
 
     '# 4. Alt+U to unlock all settings',
     'TypeKeys "%u"',
     'Start-Sleep -Seconds 5',
-    'FocusVM $vmHwnd',
 
     '# 5. Second password + Enter',
     'TypeKeys "' + SETTINGS_PWD + '"',
     'Start-Sleep -Milliseconds 500',
     'TypeKeys "{ENTER}"',
     'Start-Sleep -Seconds 8',
-    'FocusVM $vmHwnd',
 
     '# 6. Ctrl+Tab to Options tab',
     'TypeKeys "^(^{TAB})"',
     'Start-Sleep -Seconds 1',
+    'FocusVM $vmHwnd',
     'FocusVM $vmHwnd',
 
     '# 7. Tab x11 to Access Control',
