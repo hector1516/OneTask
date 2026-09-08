@@ -207,6 +207,11 @@ details.result summary { min-height: var(--tap); display: flex; align-items: cen
   background: repeating-linear-gradient(45deg, var(--accent) 0 6px, #ffb066 6px 12px);
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 @media (min-width: 640px) {
   .wrap { padding: 24px; }
   input, select { width: auto; }

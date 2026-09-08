@@ -287,6 +287,27 @@ function DeviceDetail() {
     <div>
       <Link to="/devices" style={{ fontSize: '0.9rem' }}>← Volver a dispositivos</Link>
 
+      {/* LOADING OVERLAY */}
+      {(q?.running ?? 0) > 0 && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            width: 80, height: 80, border: '6px solid rgba(255,255,255,0.2)',
+            borderTop: '6px solid #4af', borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
+          <div style={{ color: '#fff', fontSize: '1.2rem', marginTop: 20, fontWeight: 600 }}>
+            Ejecutando módulo en el agente...
+          </div>
+          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginTop: 8 }}>
+            No cierre esta ventana
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="card" style={{ marginTop: 8 }}>
         <div className="row">
